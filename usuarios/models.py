@@ -1,9 +1,43 @@
 from django.db import models
+from django.contrib.auth.models import AbstractUser, BaseUserManager
 
-# Create your models here.
 
-from django.contrib.auth.models import AbstractUser
+class RolUsuario(models.TextChoices):
+    ADMIN = "admin", "Administrador"
+    PROFESIONAL = "profesional", "Profesional"
+    RECEPCIONISTA = "recepcionista", "Recepcionista"
+    PACIENTE = "paciente", "Paciente"
+
+
+class UsuarioManager(BaseUserManager):
+    def create_user(self, username, email=None, password=None, rol=RolUsuario.PACIENTE, **extra_fields):
+        if not username:
+            raise ValueError("El nombre de usuario es obligatorio")
+        email = self.normalize_email(email)
+        user = self.model(username=username, email=email, rol=rol, **extra_fields)
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
+
+    def create_superuser(self, username, email=None, password=None, **extra_fields):
+        extra_fields.setdefault("is_staff", True)
+        extra_fields.setdefault("is_superuser", True)
+        extra_fields.setdefault("rol", RolUsuario.ADMIN)
+        return self.create_user(username, email, password, **extra_fields)
 
 
 class Usuario(AbstractUser):
-    pass
+    rol = models.CharField(
+        max_length=20,
+        choices=RolUsuario.choices,
+        default=RolUsuario.PACIENTE,
+    )
+
+    objects = UsuarioManager()
+
+    class Meta:
+        verbose_name = "Usuario"
+        verbose_name_plural = "Usuarios"
+
+    def __str__(self):
+        return f"{self.username} ({self.get_rol_display()})"

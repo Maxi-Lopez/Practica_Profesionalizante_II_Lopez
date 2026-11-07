@@ -24,3 +24,7 @@ staticfiles/
 
 # Logs
 *.log
+
+# Documentos de contexto internos (NO subir a GitHub)
+*.md
+!README.md
