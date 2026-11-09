@@ -1,3 +1,5 @@
+from django.conf import settings
+from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import path, include
 from rest_framework_simplejwt.views import TokenRefreshView
@@ -12,6 +14,7 @@ from tratamientos.routers import router as tratamientos_router
 from facturacion.routers import router as facturacion_router
 from inventario.routers import router as inventario_router
 from compras.routers import router as compras_router
+from documentos.routers import router as documentos_router
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -26,6 +29,7 @@ urlpatterns = [
     path("api/facturacion/", include(facturacion_router.urls)),
     path("api/inventario/", include(inventario_router.urls)),
     path("api/compras/", include(compras_router.urls)),
+    path("api/documentos/", include(documentos_router.urls)),
 
     # Documentación API (Swagger/OpenAPI)
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
@@ -33,3 +37,6 @@ urlpatterns = [
 
     path("api/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
