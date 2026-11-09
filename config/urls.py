@@ -4,12 +4,14 @@ from rest_framework_simplejwt.views import TokenRefreshView
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 from personas.routers import router as personas_router
+from pacientes.routers import router as pacientes_router
 
 urlpatterns = [
     path("admin/", admin.site.urls),
 
     path("api/", include("usuarios.urls")),
     path("api/personas/", include(personas_router.urls)),
+    path("api/pacientes/", include(pacientes_router.urls)),
 
     # Documentación API (Swagger/OpenAPI)
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
