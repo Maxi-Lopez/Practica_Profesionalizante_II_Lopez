@@ -19,6 +19,10 @@ from documentos.routers import router as documentos_router
 urlpatterns = [
     path("admin/", admin.site.urls),
 
+    # Web Interface (HTML templates)
+    path("", include("core.urls")),
+
+    # API REST
     path("api/", include("usuarios.urls")),
     path("api/personas/", include(personas_router.urls)),
     path("api/pacientes/", include(pacientes_router.urls)),
