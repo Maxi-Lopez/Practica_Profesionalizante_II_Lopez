@@ -170,7 +170,7 @@ class ComprasListView(LoginRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         from compras.models import Compra
-        context['compras'] = Compra.objects.select_related('proveedor').filter(activo=True).order_by('-fecha')
+        context['compras'] = Compra.objects.select_related('proveedor').filter(anulada=False).order_by('-fecha')
         return context
 
 

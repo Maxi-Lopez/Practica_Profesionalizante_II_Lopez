@@ -1,4 +1,11 @@
-<aside class="fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out lg:translate-x-0" aria-label="Sidebar">
+<aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out" aria-label="Sidebar">
+    <!-- Botón cerrar (mobile only) -->
+    <button id="menu-close" type="button" class="lg:hidden absolute top-4 right-4 z-60 p-2 bg-white rounded-lg shadow-md border border-gray-200 hover:bg-gray-50 transition-colors" aria-label="Cerrar menú">
+        <svg class="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+    </button>
+    
     <div class="flex flex-col h-full">
         <div class="flex flex-col flex-grow pt-5 pb-4 overflow-y-auto">
             <nav class="flex-1 px-2 space-y-1">
