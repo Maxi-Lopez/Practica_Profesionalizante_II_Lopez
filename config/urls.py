@@ -11,6 +11,7 @@ from turnos.routers import router as turnos_router
 from tratamientos.routers import router as tratamientos_router
 from facturacion.routers import router as facturacion_router
 from inventario.routers import router as inventario_router
+from compras.routers import router as compras_router
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -24,6 +25,7 @@ urlpatterns = [
     path("api/tratamientos/", include(tratamientos_router.urls)),
     path("api/facturacion/", include(facturacion_router.urls)),
     path("api/inventario/", include(inventario_router.urls)),
+    path("api/compras/", include(compras_router.urls)),
 
     # Documentación API (Swagger/OpenAPI)
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
