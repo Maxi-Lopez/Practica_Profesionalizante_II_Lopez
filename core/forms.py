@@ -49,6 +49,11 @@ class PacienteForm(forms.ModelForm):
         label="Email",
         widget=forms.EmailInput(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'})
     )
+    foto = forms.ImageField(
+        required=False,
+        label="Foto de perfil",
+        widget=forms.ClearableFileInput(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'})
+    )
 
     # Paciente fields
     obra_social = forms.ModelChoiceField(
@@ -229,6 +234,12 @@ class PacienteForm(forms.ModelForm):
                 email, _ = Email.objects.get_or_create(persona=persona, defaults={'tipo': 'PERSONAL', 'es_principal': True})
                 email.direccion_email = email_direccion
                 email.save()
+            
+            # Update foto
+            foto = self.cleaned_data.get('foto')
+            if foto:
+                persona.foto = foto
+                persona.save()
             
             paciente.persona = persona
             paciente.save()

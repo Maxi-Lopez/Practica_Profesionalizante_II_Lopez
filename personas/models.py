@@ -85,6 +85,13 @@ class Persona(models.Model):
         blank=True,
     )
 
+    foto = models.ImageField(
+        upload_to='fotos_personas/',
+        null=True,
+        blank=True,
+        verbose_name='Foto de perfil'
+    )
+
     localidad = models.ForeignKey(
         Localidad,
         on_delete=models.PROTECT,
