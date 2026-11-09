@@ -1,6 +1,6 @@
-from django.views.generic import TemplateView
+from django.views.generic import TemplateView, CreateView, UpdateView, DeleteView
 from django.contrib.auth.views import LoginView, LogoutView
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.shortcuts import render, redirect
 from django.contrib.auth import login
 from django.contrib import messages
@@ -8,6 +8,7 @@ from django.urls import reverse_lazy
 
 from usuarios.models import Usuario
 from usuarios.forms import CustomUserCreationForm
+from core.forms import PacienteForm
 
 
 class HomeView(TemplateView):
@@ -91,6 +92,69 @@ class PacientesListView(LoginRequiredMixin, TemplateView):
         from pacientes.models import Paciente
         context['pacientes'] = Paciente.objects.select_related('persona', 'obra_social').filter(activo=True).order_by('-fecha_ingreso')
         return context
+
+
+class PacienteCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+    model = None  # Usamos form_class en lugar de model
+    form_class = PacienteForm
+    template_name = 'pacientes/form.html'
+    success_url = reverse_lazy('pacientes_list')
+    login_url = 'login'
+    permission_required = 'pacientes.add_paciente'
+    
+    def get_permission_required(self):
+        # Permitir a admin, profesional y recepcionista
+        if self.request.user.is_superuser:
+            return ()
+        return ('pacientes.add_paciente',)
+    
+    def form_valid(self, form):
+        messages.success(self.request, 'Paciente creado exitosamente.')
+        return super().form_valid(form)
+
+
+class PacienteUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+    model = None  # Usamos form_class en lugar de model
+    form_class = PacienteForm
+    template_name = 'pacientes/form.html'
+    success_url = reverse_lazy('pacientes_list')
+    login_url = 'login'
+    permission_required = 'pacientes.change_paciente'
+    pk_url_kwarg = 'pk'
+    
+    def get_permission_required(self):
+        if self.request.user.is_superuser:
+            return ()
+        return ('pacientes.change_paciente',)
+    
+    def get_object(self, queryset=None):
+        from pacientes.models import Paciente
+        return Paciente.objects.select_related('persona').get(pk=self.kwargs['pk'])
+    
+    def form_valid(self, form):
+        messages.success(self.request, 'Paciente actualizado exitosamente.')
+        return super().form_valid(form)
+
+
+class PacienteDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
+    template_name = 'pacientes/confirm_delete.html'
+    success_url = reverse_lazy('pacientes_list')
+    login_url = 'login'
+    permission_required = 'pacientes.delete_paciente'
+    pk_url_kwarg = 'pk'
+    
+    def get_permission_required(self):
+        if self.request.user.is_superuser:
+            return ()
+        return ('pacientes.delete_paciente',)
+    
+    def get_object(self, queryset=None):
+        from pacientes.models import Paciente
+        return Paciente.objects.select_related('persona').get(pk=self.kwargs['pk'])
+    
+    def delete(self, request, *args, **kwargs):
+        messages.success(request, 'Paciente dado de baja exitosamente.')
+        return super().delete(request, *args, **kwargs)
 
 
 class TurnosListView(LoginRequiredMixin, TemplateView):

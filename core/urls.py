@@ -5,6 +5,9 @@ from .views import (
     CustomLogoutView,
     RegisterView,
     PacientesListView,
+    PacienteCreateView,
+    PacienteUpdateView,
+    PacienteDeleteView,
     TurnosListView,
     TratamientosListView,
     EmpleadosListView,
@@ -21,8 +24,13 @@ urlpatterns = [
     path('logout/', CustomLogoutView.as_view(), name='logout'),
     path('register/', RegisterView.as_view(), name='register'),
     
-    # Listados (requieren login)
+    # Pacientes CRUD
     path('pacientes/', PacientesListView.as_view(), name='pacientes_list'),
+    path('pacientes/crear/', PacienteCreateView.as_view(), name='paciente_create'),
+    path('pacientes/editar/<int:pk>/', PacienteUpdateView.as_view(), name='paciente_update'),
+    path('pacientes/eliminar/<int:pk>/', PacienteDeleteView.as_view(), name='paciente_delete'),
+    
+    # Listados (requieren login)
     path('turnos/', TurnosListView.as_view(), name='turnos_list'),
     path('tratamientos/', TratamientosListView.as_view(), name='tratamientos_list'),
     path('empleados/', EmpleadosListView.as_view(), name='empleados_list'),
