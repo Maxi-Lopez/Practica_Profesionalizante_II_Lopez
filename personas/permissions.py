@@ -52,3 +52,17 @@ class EsAdminOProfesional(permissions.BasePermission):
         if request.user.is_superuser:
             return True
         return request.user.rol in ['admin', 'profesional']
+
+
+class EsAdminProfesionalRecepcionista(permissions.BasePermission):
+    """
+    Permiso para usuarios con rol 'admin', 'profesional' o 'recepcionista' o superusuarios.
+    Usado para escritura en pacientes, turnos, etc.
+    """
+
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
+        if request.user.is_superuser:
+            return True
+        return request.user.rol in ['admin', 'profesional', 'recepcionista']
