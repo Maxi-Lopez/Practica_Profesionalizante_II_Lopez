@@ -5,7 +5,11 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from django_filters.rest_framework import DjangoFilterBackend
 
-from .models import ObraSocial, TipoDiagnostico, Diagnostico, Paciente, ResponsablePaciente, PacienteDiagnostico
+from .models import (
+    ObraSocial, TipoDiagnostico, Diagnostico, Paciente,
+    ResponsablePaciente, PacienteDiagnostico,
+    Sala, AreaInterdisciplinaria, DiagnosticoArea, SeguimientoTrimestral
+)
 from .serializers import (
     ObraSocialSerializer,
     TipoDiagnosticoSerializer,
@@ -14,8 +18,16 @@ from .serializers import (
     PacienteListSerializer,
     ResponsablePacienteSerializer,
     PacienteDiagnosticoSerializer,
+    SalaSerializer,
+    AreaInterdisciplinariaSerializer,
+    DiagnosticoAreaSerializer,
+    SeguimientoTrimestralSerializer,
 )
-from personas.permissions import EsAdmin, EsProfesional, EsRecepcionista, EsAdminOProfesional, EsAdminProfesionalRecepcionista
+from core.permissions import (
+    EsAdmin, EsOrientador, EsProfesional, EsRecepcionista,
+    EsAdminOProfesional, EsAdminProfesionalRecepcionista,
+    PuedeVerDiagnosticoArea, PuedeVerSeguimientoTrimestral
+)
 
 
 class BaseViewSet(viewsets.ModelViewSet):
@@ -26,7 +38,7 @@ class BaseViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.request.method == 'GET':
             return [AllowAny()]
-        # Escritura permitida para admin, profesional y recepcionista
+        # Escritura permitida para admin, profesional, orientador y recepcionista
         return [EsAdminProfesionalRecepcionista()]
 
     @action(detail=True, methods=['post'])
@@ -84,24 +96,98 @@ class PacienteDiagnosticoViewSet(BaseViewSet):
     ordering_fields = ['fecha_registro']
 
 
+class SalaViewSet(BaseViewSet):
+    queryset = Sala.objects.filter(activo=True).select_related('orientador__persona').order_by('nombre')
+    serializer_class = SalaSerializer
+    search_fields = ['nombre', 'orientador__persona__nombre', 'orientador__persona__apellido']
+    filterset_fields = ['activo', 'orientador']
+    ordering_fields = ['nombre', 'fecha_creacion']
+
+
+class AreaInterdisciplinariaViewSet(BaseViewSet):
+    queryset = AreaInterdisciplinaria.objects.filter(activo=True).order_by('nombre')
+    serializer_class = AreaInterdisciplinariaSerializer
+    search_fields = ['nombre', 'descripcion']
+    filterset_fields = ['activo']
+    ordering_fields = ['nombre', 'fecha_creacion']
+
+
+class DiagnosticoAreaViewSet(BaseViewSet):
+    permission_classes = [PuedeVerDiagnosticoArea]
+    serializer_class = DiagnosticoAreaSerializer
+    search_fields = ['paciente__persona__nombre', 'paciente__persona__apellido', 'diagnostico']
+    filterset_fields = ['paciente', 'area', 'activo']
+    ordering_fields = ['fecha', 'fecha_creacion']
+    ordering = ['-fecha']
+
+    def get_queryset(self):
+        user = self.request.user
+        if not user or not user.is_authenticated:
+            return DiagnosticoArea.objects.none()
+        if user.is_superuser or user.rol in ['admin', 'orientador']:
+            return DiagnosticoArea.objects.filter(activo=True).select_related(
+                'paciente__persona', 'area', 'profesional__persona'
+            )
+        if user.rol == 'profesional':
+            return DiagnosticoArea.objects.filter(activo=True, area=user.area).select_related(
+                'paciente__persona', 'area', 'profesional__persona'
+            )
+        return DiagnosticoArea.objects.none()
+
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            return [PuedeVerDiagnosticoArea()]
+        return [EsAdminProfesionalRecepcionista()]
+
+
+class SeguimientoTrimestralViewSet(BaseViewSet):
+    permission_classes = [PuedeVerSeguimientoTrimestral]
+    serializer_class = SeguimientoTrimestralSerializer
+    search_fields = ['paciente__persona__nombre', 'paciente__persona__apellido', 'observaciones']
+    filterset_fields = ['paciente', 'area', 'activo', 'es_intervencion_mensual']
+    ordering_fields = ['fecha', 'fecha_creacion']
+    ordering = ['-fecha']
+
+    def get_queryset(self):
+        user = self.request.user
+        if not user or not user.is_authenticated:
+            return SeguimientoTrimestral.objects.none()
+        if user.is_superuser or user.rol in ['admin', 'orientador']:
+            return SeguimientoTrimestral.objects.filter(activo=True).select_related(
+                'paciente__persona', 'area', 'profesional__persona'
+            )
+        if user.rol == 'profesional':
+            return SeguimientoTrimestral.objects.filter(activo=True, area=user.area).select_related(
+                'paciente__persona', 'area', 'profesional__persona'
+            )
+        return SeguimientoTrimestral.objects.none()
+
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            return [PuedeVerSeguimientoTrimestral()]
+        return [EsAdminProfesionalRecepcionista()]
+
+
 class PacienteViewSet(BaseViewSet):
     queryset = Paciente.objects.filter(activo=True).select_related(
         'persona__localidad__provincia__pais',
-        'obra_social'
+        'obra_social',
+        'sala'
     ).prefetch_related(
         'diagnosticos__diagnostico__tipo',
         'responsables__persona'
     ).order_by('persona__apellido', 'persona__nombre')
     serializer_class = PacienteSerializer
     search_fields = ['persona__nombre', 'persona__apellido', 'persona__dni', 'historia_clinica', 'nro_afiliado']
-    filterset_fields = ['activo', 'obra_social', 'persona__localidad', 'persona__localidad__provincia']
+    filterset_fields = ['activo', 'obra_social', 'persona__localidad', 'persona__localidad__provincia', 'sala', 'estado_admision']
     ordering_fields = ['persona__apellido', 'persona__nombre', 'historia_clinica', 'fecha_ingreso', 'fecha_creacion']
 
 
 class PacienteListViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Paciente.objects.filter(activo=True).select_related(
         'persona__localidad__provincia__pais',
-        'obra_social'
+        'obra_social',
+        'sala'
     ).prefetch_related(
         'diagnosticos__diagnostico__tipo',
         'responsables__persona'
@@ -110,6 +196,6 @@ class PacienteListViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [AllowAny]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['persona__nombre', 'persona__apellido', 'persona__dni', 'historia_clinica', 'nro_afiliado']
-    filterset_fields = ['activo', 'obra_social', 'persona__localidad', 'persona__localidad__provincia']
+    filterset_fields = ['activo', 'obra_social', 'persona__localidad', 'persona__localidad__provincia', 'sala', 'estado_admision']
     ordering_fields = ['persona__apellido', 'persona__nombre', 'historia_clinica', 'fecha_ingreso', 'fecha_creacion']
     ordering = ['persona__apellido', 'persona__nombre']

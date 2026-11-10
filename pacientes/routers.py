@@ -8,6 +8,10 @@ from .views import (
     PacienteListViewSet,
     ResponsablePacienteViewSet,
     PacienteDiagnosticoViewSet,
+    SalaViewSet,
+    AreaInterdisciplinariaViewSet,
+    DiagnosticoAreaViewSet,
+    SeguimientoTrimestralViewSet,
 )
 
 router = DefaultRouter()
@@ -18,3 +22,7 @@ router.register('paciente', PacienteViewSet, basename='paciente-api')
 router.register('paciente-get', PacienteListViewSet, basename='paciente-get-api')
 router.register('responsable', ResponsablePacienteViewSet, basename='responsable-api')
 router.register('paciente-diagnostico', PacienteDiagnosticoViewSet, basename='paciente-diagnostico-api')
+router.register('sala', SalaViewSet, basename='sala-api')
+router.register('area', AreaInterdisciplinariaViewSet, basename='area-api')
+router.register('diagnostico-area', DiagnosticoAreaViewSet, basename='diagnostico-area-api')
+router.register('seguimiento', SeguimientoTrimestralViewSet, basename='seguimiento-api')

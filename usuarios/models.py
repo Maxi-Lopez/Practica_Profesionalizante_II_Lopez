@@ -4,6 +4,7 @@ from django.contrib.auth.models import AbstractUser, BaseUserManager
 
 class RolUsuario(models.TextChoices):
     ADMIN = "admin", "Administrador"
+    ORIENTADOR = "orientador", "Orientador de Sala"
     PROFESIONAL = "profesional", "Profesional"
     RECEPCIONISTA = "recepcionista", "Recepcionista"
     PACIENTE = "paciente", "Paciente"
@@ -31,6 +32,14 @@ class Usuario(AbstractUser):
         max_length=20,
         choices=RolUsuario.choices,
         default=RolUsuario.PACIENTE,
+    )
+    area = models.ForeignKey(
+        'pacientes.AreaInterdisciplinaria',
+        on_delete=models.PROTECT,
+        related_name="usuarios",
+        null=True,
+        blank=True,
+        help_text="Área interdisciplinaria a la que pertenece el profesional (si rol=profesional)",
     )
 
     objects = UsuarioManager()
