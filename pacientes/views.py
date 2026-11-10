@@ -28,6 +28,7 @@ from core.permissions import (
     EsAdminOProfesional, EsAdminProfesionalRecepcionista,
     PuedeVerDiagnosticoArea, PuedeVerSeguimientoTrimestral
 )
+from rest_framework.permissions import IsAuthenticated
 
 
 class BaseViewSet(viewsets.ModelViewSet):
@@ -181,6 +182,12 @@ class PacienteViewSet(BaseViewSet):
     search_fields = ['persona__nombre', 'persona__apellido', 'persona__dni', 'historia_clinica', 'nro_afiliado']
     filterset_fields = ['activo', 'obra_social', 'persona__localidad', 'persona__localidad__provincia', 'sala', 'estado_admision']
     ordering_fields = ['persona__apellido', 'persona__nombre', 'historia_clinica', 'fecha_ingreso', 'fecha_creacion']
+
+    def get_permissions(self):
+        """Pacientes requiere autenticación para todas las operaciones."""
+        if self.request.method == 'GET':
+            return [IsAuthenticated()]
+        return [EsAdminProfesionalRecepcionista()]
 
 
 class PacienteListViewSet(viewsets.ReadOnlyModelViewSet):

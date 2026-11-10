@@ -28,3 +28,7 @@ staticfiles/
 # Documentos de contexto internos (NO subir a GitHub)
 *.md
 !README.md
+
+
+#Untracked files:
+.coverage

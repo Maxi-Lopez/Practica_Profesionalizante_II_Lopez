@@ -1,4 +1,5 @@
 from django.db import models
+from django.core.exceptions import ValidationError
 
 from pacientes.models import Paciente
 from empleados.models import Empleado
@@ -73,6 +74,35 @@ class Turno(models.Model):
             f"{self.fecha} {self.hora_inicio} - "
             f"{self.servicio}"
         )
+
+    def clean(self):
+        """Validaciones a nivel de modelo."""
+        super().clean()
+        if self.hora_fin and self.hora_inicio and self.hora_fin <= self.hora_inicio:
+            raise ValidationError({
+                "hora_fin": "La hora de fin debe ser posterior a la hora de inicio."
+            })
+
+        # Validar solapamiento con otros turnos del mismo profesional en la misma fecha
+        if self.profesional_id and self.fecha and self.hora_inicio and self.hora_fin:
+            qs = Turno.objects.filter(
+                profesional=self.profesional,
+                fecha=self.fecha,
+                estado__in=[EstadoTurno.PENDIENTE, EstadoTurno.CONFIRMADO],
+            ).exclude(pk=self.pk)
+            for existing in qs:
+                # Verificar solapamiento: nuevo.inicio < existente.fin AND nuevo.fin > existente.inicio
+                if self.hora_inicio < existing.hora_fin and self.hora_fin > existing.hora_inicio:
+                    raise ValidationError({
+                        "hora_inicio": (
+                            f"El profesional ya tiene un turno en ese horario "
+                            f"({existing.hora_inicio}-{existing.hora_fin})."
+                        )
+                    })
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
 
 
 class AsistenciaPaciente(models.Model):

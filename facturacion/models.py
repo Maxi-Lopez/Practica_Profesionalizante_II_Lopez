@@ -69,6 +69,23 @@ class FacturaVenta(models.Model):
     def __str__(self):
         return f"{self.numero_factura} - {self.paciente}"
 
+    def calcular_total(self):
+        """Calcula el total de la factura: suma de subtotales de detalles - descuento."""
+        from decimal import Decimal
+        subtotal = sum(
+            (detalle.subtotal for detalle in self.detalles.all()),
+            Decimal('0')
+        )
+        self.subtotal = subtotal
+        self.total = subtotal - (self.descuento or Decimal('0'))
+        return self.total
+
+    def save(self, *args, **kwargs):
+        # Recalcular total antes de guardar si hay detalles
+        if self.pk and self.detalles.exists():
+            self.calcular_total()
+        super().save(*args, **kwargs)
+
 
 class DetalleVenta(models.Model):
     factura = models.ForeignKey(
