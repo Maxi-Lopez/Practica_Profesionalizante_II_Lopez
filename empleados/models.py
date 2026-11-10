@@ -1,4 +1,5 @@
 from django.db import models
+from django.core.exceptions import ValidationError
 
 from personas.models import Persona
 
@@ -53,9 +54,37 @@ class Empleado(models.Model):
         verbose_name = "Empleado"
         verbose_name_plural = "Empleados"
         ordering = ["persona__apellido", "persona__nombre"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["matricula"],
+                name="unique_empleado_matricula",
+            )
+        ]
 
     def __str__(self):
         return str(self.persona)
+
+    def clean(self):
+        super().clean()
+        if self.fecha_baja and self.fecha_ingreso and self.fecha_baja < self.fecha_ingreso:
+            raise ValidationError({
+                "fecha_baja": "La fecha de baja no puede ser anterior a la fecha de ingreso."
+            })
+
+        # Validar matrícula única (excluyendo la instancia actual en edición)
+        if self.matricula:
+            from django.db.models import Q
+            qs = Empleado.objects.filter(matricula=self.matricula)
+            if self.pk:
+                qs = qs.exclude(pk=self.pk)
+            if qs.exists():
+                raise ValidationError({
+                    "matricula": "Ya existe un empleado con esta matrícula."
+                })
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
 
 
 class EmpleadoRol(models.Model):
