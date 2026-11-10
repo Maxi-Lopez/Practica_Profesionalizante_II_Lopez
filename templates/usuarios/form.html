@@ -67,9 +67,42 @@
                 </div>
             </div>
 
+            {% if form.cambiar_password %}
+            <!-- Modo edición: checkbox para cambiar contraseña -->
+            <div class="border-t border-gray-200 pt-6">
+                <div class="mb-4">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        {{ form.cambiar_password }}
+                        <span class="text-sm font-medium text-gray-700">¿Desea cambiar la contraseña?</span>
+                    </label>
+                    {% if form.cambiar_password.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.cambiar_password.errors }}</p>
+                    {% endif %}
+                </div>
+
+                <div id="password-fields" class="hidden grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="{{ form.password1.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Nueva contraseña *</label>
+                        {{ form.password1 }}
+                        {% if form.password1.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.password1.errors }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label for="{{ form.password2.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Confirmar nueva contraseña *</label>
+                        {{ form.password2 }}
+                        {% if form.password2.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.password2.errors }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <!-- Modo creación: contraseña obligatoria -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                    <label for="{{ form.password1.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Contraseña {% if object %}<span class="text-gray-400">(opcional)</span>{% else %}*{% endif %}</label>
+                    <label for="{{ form.password1.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Contraseña *</label>
                     {{ form.password1 }}
                     {% if form.password1.help_text %}
                     <p class="mt-1 text-sm text-gray-500">{{ form.password1.help_text }}</p>
@@ -80,7 +113,7 @@
                 </div>
 
                 <div>
-                    <label for="{{ form.password2.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Confirmar contraseña {% if object %}<span class="text-gray-400">(opcional)</span>{% else %}*{% endif %}</label>
+                    <label for="{{ form.password2.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Confirmar contraseña *</label>
                     {{ form.password2 }}
                     {% if form.password2.help_text %}
                     <p class="mt-1 text-sm text-gray-500">{{ form.password2.help_text }}</p>
@@ -90,6 +123,7 @@
                     {% endif %}
                 </div>
             </div>
+            {% endif %}
 
             <div class="pt-4 border-t border-gray-200 flex flex-col sm:flex-row sm:items-center sm:justify-end gap-4">
                 <a href="{% url 'usuarios_list' %}" class="px-4 py-2 border border-gray-300 rounded-lg font-medium hover:bg-gray-50 transition-colors text-center">Cancelar</a>
@@ -100,4 +134,34 @@
         </form>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+{% if form.cambiar_password %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const checkbox = document.querySelector('input[name="cambiar_password"]');
+        const passwordFields = document.getElementById('password-fields');
+        const password1Input = passwordFields ? passwordFields.querySelector('input[name="password1"]') : null;
+        const password2Input = passwordFields ? passwordFields.querySelector('input[name="password2"]') : null;
+
+        function togglePasswordFields() {
+            if (checkbox.checked) {
+                passwordFields.classList.remove('hidden');
+                if (password1Input) password1Input.required = true;
+                if (password2Input) password2Input.required = true;
+            } else {
+                passwordFields.classList.add('hidden');
+                if (password1Input) password1Input.required = false;
+                if (password2Input) password2Input.required = false;
+            }
+        }
+
+        if (checkbox && passwordFields) {
+            checkbox.addEventListener('change', togglePasswordFields);
+            togglePasswordFields(); // estado inicial
+        }
+    });
+</script>
+{% endif %}
 {% endblock %}
