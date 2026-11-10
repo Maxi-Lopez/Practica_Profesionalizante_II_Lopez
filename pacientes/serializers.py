@@ -111,6 +111,19 @@ class DiagnosticoAreaSerializer(serializers.ModelSerializer):
         fields = ['id', 'paciente', 'area', 'area_id', 'fecha', 'diagnostico', 'profesional', 'profesional_id', 'activo', 'fecha_creacion', 'fecha_actualizacion']
         read_only_fields = ['id', 'fecha_creacion', 'fecha_actualizacion', 'activo']
 
+    def validate(self, data):
+        request = self.context.get('request')
+        if request and request.user and request.user.is_authenticated:
+            if request.user.rol == 'profesional':
+                # Profesional solo puede crear/modificar en su área
+                if 'area' in data and data['area'] != request.user.area:
+                    raise serializers.ValidationError({
+                        "area": "Solo puede registrar diagnósticos en su área asignada."
+                    })
+                # Forzar el área del usuario profesional
+                data['area'] = request.user.area
+        return data
+
 
 class SeguimientoTrimestralSerializer(serializers.ModelSerializer):
     area = AreaInterdisciplinariaSerializer(read_only=True)
