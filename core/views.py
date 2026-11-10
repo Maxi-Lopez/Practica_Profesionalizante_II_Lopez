@@ -6,13 +6,24 @@ from django.contrib.auth import login
 from django.contrib import messages
 from django.urls import reverse_lazy
 from django.utils import timezone
+from django.core.exceptions import PermissionDenied
 
 from usuarios.models import Usuario
-from usuarios.forms import CustomUserCreationForm
+from usuarios.forms import UsuarioAdminForm
 from core.forms import PacienteForm, EmpleadoForm, DocumentoForm, SalaForm, AreaInterdisciplinariaForm, DiagnosticoAreaForm, SeguimientoTrimestralForm, ProveedorForm, TipoGastoForm, CompraForm, GastoForm, PlanTratamientoForm, ObjetivoTratamientoForm, ActividadPlanForm, HistorialMedicoForm, EvolucionSemanalForm, RegistroActividadForm, NotaImportanteForm
 from pacientes.models import Sala, AreaInterdisciplinaria, DiagnosticoArea, SeguimientoTrimestral, Paciente
 from compras.models import Proveedor, Compra, TipoGasto, Gasto
 from tratamientos.models import PlanTratamiento, ObjetivoTratamiento, ActividadPlan, HistorialMedico, EvolucionSemanal, RegistroActividad, NotaImportante
+
+
+class SoloAdminMixin:
+    """Restringe el acceso a admin/superuser."""
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return super().dispatch(request, *args, **kwargs)
+        if not (request.user.is_superuser or getattr(request.user, 'rol', None) == 'admin'):
+            raise PermissionDenied
+        return super().dispatch(request, *args, **kwargs)
 
 
 class HomeView(TemplateView):
@@ -47,32 +58,6 @@ class CustomLoginView(LoginView):
 
 class CustomLogoutView(LogoutView):
     next_page = reverse_lazy('home')
-
-
-class RegisterView(TemplateView):
-    template_name = 'registration/register.html'
-    
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['form'] = CustomUserCreationForm()
-        return context
-    
-    def post(self, request, *args, **kwargs):
-        form = CustomUserCreationForm(request.POST)
-        if form.is_valid():
-            user = form.save()
-            # Asignar al grupo Paciente por defecto
-            from django.contrib.auth.models import Group
-            paciente_group, _ = Group.objects.get_or_create(name='Paciente')
-            user.groups.add(paciente_group)
-            
-            login(request, user)
-            messages.success(request, '¡Cuenta creada exitosamente! Bienvenido a Centro de Día Proyectar.')
-            return redirect('home')
-        
-        context = self.get_context_data(**kwargs)
-        context['form'] = form
-        return render(request, self.template_name, context)
 
 
 # ============================================================
@@ -247,7 +232,7 @@ class TratamientosListView(LoginRequiredMixin, TemplateView):
         return context
 
 
-class EmpleadosListView(LoginRequiredMixin, TemplateView):
+class EmpleadosListView(SoloAdminMixin, LoginRequiredMixin, TemplateView):
     template_name = 'empleados/list.html'
     login_url = 'login'
     
@@ -291,7 +276,7 @@ class InventarioListView(LoginRequiredMixin, TemplateView):
         return context
 
 
-class ComprasListView(LoginRequiredMixin, TemplateView):
+class ComprasListView(SoloAdminMixin, LoginRequiredMixin, TemplateView):
     template_name = 'compras/list.html'
     login_url = 'login'
     
@@ -317,7 +302,7 @@ class DocumentosListView(LoginRequiredMixin, TemplateView):
 # EMPLEADOS CRUD (HTML)
 # ============================================================
 
-class EmpleadoCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+class EmpleadoCreateView(SoloAdminMixin, LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     model = None
     form_class = EmpleadoForm
     template_name = 'empleados/form.html'
@@ -335,7 +320,7 @@ class EmpleadoCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView
         return super().form_valid(form)
 
 
-class EmpleadoUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+class EmpleadoUpdateView(SoloAdminMixin, LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     model = None
     form_class = EmpleadoForm
     template_name = 'empleados/form.html'
@@ -358,7 +343,7 @@ class EmpleadoUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView
         return super().form_valid(form)
 
 
-class EmpleadoDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
+class EmpleadoDeleteView(SoloAdminMixin, LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     template_name = 'empleados/confirm_delete.html'
     success_url = reverse_lazy('empleados_list')
     login_url = 'login'
@@ -776,7 +761,7 @@ class SeguimientoDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteV
 # PROVEEDORES CRUD (HTML)
 # ============================================================
 
-class ProveedoresListView(LoginRequiredMixin, ListView):
+class ProveedoresListView(SoloAdminMixin, LoginRequiredMixin, ListView):
     model = Proveedor
     template_name = 'proveedores/list.html'
     context_object_name = 'proveedores'
@@ -787,7 +772,7 @@ class ProveedoresListView(LoginRequiredMixin, ListView):
         return Proveedor.objects.filter(activo=True).order_by('razon_social')
 
 
-class ProveedorCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+class ProveedorCreateView(SoloAdminMixin, LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     model = None
     form_class = ProveedorForm
     template_name = 'proveedores/form.html'
@@ -805,7 +790,7 @@ class ProveedorCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateVie
         return super().form_valid(form)
 
 
-class ProveedorUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+class ProveedorUpdateView(SoloAdminMixin, LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     model = None
     form_class = ProveedorForm
     template_name = 'proveedores/form.html'
@@ -827,7 +812,7 @@ class ProveedorUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateVie
         return super().form_valid(form)
 
 
-class ProveedorDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
+class ProveedorDeleteView(SoloAdminMixin, LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     template_name = 'proveedores/confirm_delete.html'
     success_url = reverse_lazy('proveedores_list')
     login_url = 'login'
@@ -854,7 +839,7 @@ class ProveedorDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteVie
 # TIPOS DE GASTO CRUD (HTML)
 # ============================================================
 
-class TiposGastoListView(LoginRequiredMixin, ListView):
+class TiposGastoListView(SoloAdminMixin, LoginRequiredMixin, ListView):
     model = TipoGasto
     template_name = 'tipos_gasto/list.html'
     context_object_name = 'tipos_gasto'
@@ -865,7 +850,7 @@ class TiposGastoListView(LoginRequiredMixin, ListView):
         return TipoGasto.objects.filter(activo=True).order_by('nombre')
 
 
-class TipoGastoCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+class TipoGastoCreateView(SoloAdminMixin, LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     model = None
     form_class = TipoGastoForm
     template_name = 'tipos_gasto/form.html'
@@ -883,7 +868,7 @@ class TipoGastoCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateVie
         return super().form_valid(form)
 
 
-class TipoGastoUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+class TipoGastoUpdateView(SoloAdminMixin, LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     model = None
     form_class = TipoGastoForm
     template_name = 'tipos_gasto/form.html'
@@ -905,7 +890,7 @@ class TipoGastoUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateVie
         return super().form_valid(form)
 
 
-class TipoGastoDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
+class TipoGastoDeleteView(SoloAdminMixin, LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     template_name = 'tipos_gasto/confirm_delete.html'
     success_url = reverse_lazy('tipos_gasto_list')
     login_url = 'login'
@@ -932,7 +917,7 @@ class TipoGastoDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteVie
 # COMPRAS CRUD (HTML)
 # ============================================================
 
-class ComprasListView(LoginRequiredMixin, ListView):
+class ComprasListView(SoloAdminMixin, LoginRequiredMixin, ListView):
     model = Compra
     template_name = 'compras/list.html'
     context_object_name = 'compras'
@@ -943,7 +928,7 @@ class ComprasListView(LoginRequiredMixin, ListView):
         return Compra.objects.filter(anulada=False).select_related('proveedor').order_by('-fecha')
 
 
-class CompraCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+class CompraCreateView(SoloAdminMixin, LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     model = None
     form_class = CompraForm
     template_name = 'compras/form.html'
@@ -961,7 +946,7 @@ class CompraCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
         return super().form_valid(form)
 
 
-class CompraUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+class CompraUpdateView(SoloAdminMixin, LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     model = None
     form_class = CompraForm
     template_name = 'compras/form.html'
@@ -983,7 +968,7 @@ class CompraUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
         return super().form_valid(form)
 
 
-class CompraDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
+class CompraDeleteView(SoloAdminMixin, LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     template_name = 'compras/confirm_delete.html'
     success_url = reverse_lazy('compras_list')
     login_url = 'login'
@@ -1010,7 +995,7 @@ class CompraDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
 # GASTOS CRUD (HTML)
 # ============================================================
 
-class GastosListView(LoginRequiredMixin, ListView):
+class GastosListView(SoloAdminMixin, LoginRequiredMixin, ListView):
     model = Gasto
     template_name = 'gastos/list.html'
     context_object_name = 'gastos'
@@ -1021,7 +1006,7 @@ class GastosListView(LoginRequiredMixin, ListView):
         return Gasto.objects.filter(anulado=False).select_related('tipo_gasto', 'proveedor').order_by('-fecha')
 
 
-class GastoCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+class GastoCreateView(SoloAdminMixin, LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     model = None
     form_class = GastoForm
     template_name = 'gastos/form.html'
@@ -1039,7 +1024,7 @@ class GastoCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
         return super().form_valid(form)
 
 
-class GastoUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+class GastoUpdateView(SoloAdminMixin, LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     model = None
     form_class = GastoForm
     template_name = 'gastos/form.html'
@@ -1061,7 +1046,7 @@ class GastoUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
         return super().form_valid(form)
 
 
-class GastoDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
+class GastoDeleteView(SoloAdminMixin, LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     template_name = 'gastos/confirm_delete.html'
     success_url = reverse_lazy('gastos_list')
     login_url = 'login'
@@ -1627,4 +1612,95 @@ class NotaDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
         self.object.activo = False
         self.object.save()
         messages.success(self.request, 'Nota importante dada de baja exitosamente.')
+        return redirect(self.success_url)
+
+
+# ============================================================
+# USUARIOS CRUD (HTML) - Solo Admin
+# ============================================================
+
+class UsuariosListView(SoloAdminMixin, LoginRequiredMixin, PermissionRequiredMixin, ListView):
+    model = Usuario
+    template_name = 'usuarios/list.html'
+    context_object_name = 'usuarios'
+    paginate_by = 20
+    login_url = 'login'
+    permission_required = 'usuarios.view_usuario'
+
+    def get_permission_required(self):
+        if self.request.user.is_superuser:
+            return ()
+        return ('usuarios.view_usuario',)
+
+    def get_queryset(self):
+        return Usuario.objects.filter(is_active=True).select_related('area').order_by('-date_joined')
+
+
+class UsuarioCreateView(SoloAdminMixin, LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+    model = Usuario
+    form_class = UsuarioAdminForm
+    template_name = 'usuarios/form.html'
+    success_url = reverse_lazy('usuarios_list')
+    login_url = 'login'
+    permission_required = 'usuarios.add_usuario'
+
+    def get_permission_required(self):
+        if self.request.user.is_superuser:
+            return ()
+        return ('usuarios.add_usuario',)
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Usuario creado exitosamente.')
+        return super().form_valid(form)
+
+
+class UsuarioUpdateView(SoloAdminMixin, LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+    model = Usuario
+    form_class = UsuarioAdminForm
+    template_name = 'usuarios/form.html'
+    success_url = reverse_lazy('usuarios_list')
+    login_url = 'login'
+    permission_required = 'usuarios.change_usuario'
+    pk_url_kwarg = 'pk'
+
+    def get_permission_required(self):
+        if self.request.user.is_superuser:
+            return ()
+        return ('usuarios.change_usuario',)
+
+    def get_queryset(self):
+        return Usuario.objects.filter(is_active=True)
+
+    def get_object(self, queryset=None):
+        return Usuario.objects.filter(is_active=True).get(pk=self.kwargs['pk'])
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Usuario actualizado exitosamente.')
+        return super().form_valid(form)
+
+
+class UsuarioDeleteView(SoloAdminMixin, LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
+    model = Usuario
+    template_name = 'usuarios/confirm_delete.html'
+    success_url = reverse_lazy('usuarios_list')
+    login_url = 'login'
+    permission_required = 'usuarios.delete_usuario'
+    pk_url_kwarg = 'pk'
+
+    def get_permission_required(self):
+        if self.request.user.is_superuser:
+            return ()
+        return ('usuarios.delete_usuario',)
+
+    def get_queryset(self):
+        return Usuario.objects.filter(is_active=True)
+
+    def get_object(self, queryset=None):
+        return Usuario.objects.filter(is_active=True).get(pk=self.kwargs['pk'])
+
+    def form_valid(self, form):
+        self.object = self.get_object()
+        self.object.is_active = False
+        self.object.save()
+        messages.success(self.request, 'Usuario dado de baja exitosamente.')
         return redirect(self.success_url)

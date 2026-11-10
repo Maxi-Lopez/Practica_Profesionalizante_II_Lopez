@@ -1,9 +1,9 @@
 from django.urls import path
+from django.views.generic import RedirectView
 from .views import (
     HomeView,
     CustomLoginView,
     CustomLogoutView,
-    RegisterView,
     PacientesListView,
     PacienteCreateView,
     PacienteUpdateView,
@@ -84,13 +84,17 @@ from .views import (
     NotaCreateView,
     NotaUpdateView,
     NotaDeleteView,
+    UsuariosListView,
+    UsuarioCreateView,
+    UsuarioUpdateView,
+    UsuarioDeleteView,
 )
 
 urlpatterns = [
     path('', HomeView.as_view(), name='home'),
     path('login/', CustomLoginView.as_view(), name='login'),
     path('logout/', CustomLogoutView.as_view(), name='logout'),
-    path('register/', RegisterView.as_view(), name='register'),
+    path('register/', RedirectView.as_view(url='/login/', permanent=False), name='register'),
     
     # Pacientes CRUD
     path('pacientes/', PacientesListView.as_view(), name='pacientes_list'),
@@ -208,4 +212,10 @@ urlpatterns = [
     path('notas/crear/', NotaCreateView.as_view(), name='nota_create'),
     path('notas/editar/<int:pk>/', NotaUpdateView.as_view(), name='nota_update'),
     path('notas/eliminar/<int:pk>/', NotaDeleteView.as_view(), name='nota_delete'),
+
+    # Usuarios CRUD (solo admin)
+    path('usuarios/', UsuariosListView.as_view(), name='usuarios_list'),
+    path('usuarios/crear/', UsuarioCreateView.as_view(), name='usuario_create'),
+    path('usuarios/editar/<int:pk>/', UsuarioUpdateView.as_view(), name='usuario_update'),
+    path('usuarios/eliminar/<int:pk>/', UsuarioDeleteView.as_view(), name='usuario_delete'),
 ]
