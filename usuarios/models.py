@@ -3,15 +3,22 @@ from django.contrib.auth.models import AbstractUser, BaseUserManager
 
 
 class RolUsuario(models.TextChoices):
-    ADMIN = "admin", "Administrador"
-    ORIENTADOR = "orientador", "Orientador de Sala"
-    PROFESIONAL = "profesional", "Profesional"
+    ADMIN = "admin", "Administrativo"
+    ORIENTADOR = "orientador", "Orientador"
+    PSICOLOGO = "psicologo", "Psicólogo"
+    MEDICO = "medico", "Médico"
+    TRABAJADOR_SOCIAL = "trabajador_social", "Trabajador Social"
+    KINESIOLOGO = "kinesiologo", "Kinesiólogo"
+    PSICOMOTRICISTA = "psicomotricista", "Psicomotricista"
+    NUTRICIONISTA = "nutricionista", "Nutricionista"
+    PSICOPEDAGOGO = "psicopedagogo", "Psicopedagogo"
+    PEDAGOGO = "pedagogo", "Pedagogo"
+    ENFERMERO = "enfermero", "Enfermero"
     RECEPCIONISTA = "recepcionista", "Recepcionista"
-    PACIENTE = "paciente", "Paciente"
 
 
 class UsuarioManager(BaseUserManager):
-    def create_user(self, username, email=None, password=None, rol=RolUsuario.PACIENTE, **extra_fields):
+    def create_user(self, username, email=None, password=None, rol=RolUsuario.RECEPCIONISTA, **extra_fields):
         if not username:
             raise ValueError("El nombre de usuario es obligatorio")
         email = self.normalize_email(email)
@@ -31,7 +38,7 @@ class Usuario(AbstractUser):
     rol = models.CharField(
         max_length=20,
         choices=RolUsuario.choices,
-        default=RolUsuario.PACIENTE,
+        default=RolUsuario.RECEPCIONISTA,
     )
     area = models.ForeignKey(
         'pacientes.AreaInterdisciplinaria',
