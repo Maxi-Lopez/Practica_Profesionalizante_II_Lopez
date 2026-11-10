@@ -94,24 +94,30 @@ class PacienteDiagnosticoAdmin(admin.ModelAdmin):
 
 
 # ============================================================
-# MODELOS DE DOMINIO CLÍNICO (Salas, Áreas, Diagnósticos, Seguimientos)
+# DOMINIO CLÍNICO: Salas, Áreas, Diagnósticos y Seguimientos
 # ============================================================
 
 @admin.register(Sala)
 class SalaAdmin(admin.ModelAdmin):
     list_display = ['nombre', 'orientador', 'activo', 'fecha_creacion']
     list_filter = ['activo']
-    search_fields = ['nombre', 'orientador__persona__nombre', 'orientador__persona__apellido']
+    search_fields = [
+        'nombre',
+        'orientador__persona__nombre',
+        'orientador__persona__apellido',
+    ]
     ordering = ['nombre']
     readonly_fields = ['fecha_creacion', 'fecha_actualizacion']
+    autocomplete_fields = ['orientador']
 
 
 @admin.register(AreaInterdisciplinaria)
 class AreaInterdisciplinariaAdmin(admin.ModelAdmin):
-    list_display = ['nombre', 'activo']
-    list_filter = ['activo']
+    list_display = ['nombre', 'descripcion', 'activo']
+    list_filter = ['activo', 'nombre']
     search_fields = ['nombre', 'descripcion']
     ordering = ['nombre']
+    readonly_fields = ['fecha_creacion', 'fecha_actualizacion']
 
 
 @admin.register(DiagnosticoArea)
@@ -127,11 +133,19 @@ class DiagnosticoAreaAdmin(admin.ModelAdmin):
     ordering = ['-fecha']
     readonly_fields = ['fecha_creacion', 'fecha_actualizacion']
     autocomplete_fields = ['paciente', 'area', 'profesional']
+    date_hierarchy = 'fecha'
 
 
 @admin.register(SeguimientoTrimestral)
 class SeguimientoTrimestralAdmin(admin.ModelAdmin):
-    list_display = ['paciente', 'area', 'fecha', 'es_intervencion_mensual', 'profesional', 'activo']
+    list_display = [
+        'paciente',
+        'area',
+        'fecha',
+        'es_intervencion_mensual',
+        'profesional',
+        'activo',
+    ]
     list_filter = ['area', 'es_intervencion_mensual', 'activo', 'fecha']
     search_fields = [
         'paciente__persona__nombre',
@@ -142,3 +156,4 @@ class SeguimientoTrimestralAdmin(admin.ModelAdmin):
     ordering = ['-fecha']
     readonly_fields = ['fecha_creacion', 'fecha_actualizacion']
     autocomplete_fields = ['paciente', 'area', 'profesional']
+    date_hierarchy = 'fecha'
