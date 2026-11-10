@@ -1,19 +1,19 @@
 {% extends 'base.html' %}
 
-{% block title %}Pacientes - Centro de Día Proyectar{% endblock %}
+{% block title %}Concurrentes - Centro de Día Proyectar{% endblock %}
 
 {% block content %}
 <div class="max-w-7xl mx-auto">
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900">Pacientes</h1>
-            <p class="text-gray-600 mt-1">Gestión de pacientes del centro</p>
+            <h1 class="text-2xl font-bold text-gray-900">Concurrentes</h1>
+            <p class="text-gray-600 mt-1">Gestión de concurrentes del centro</p>
         </div>
         <a href="{% url 'paciente_create' %}" class="bg-primary-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-700 transition-colors flex items-center justify-center">
             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
             </svg>
-            Nuevo Paciente
+            Nuevo Concurrente
         </a>
     </div>
 
@@ -75,7 +75,7 @@
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                     <a href="{% url 'paciente_update' paciente.pk %}" class="text-primary-600 hover:text-primary-900 mr-3">Editar</a>
-                                    <form action="{% url 'paciente_delete' paciente.pk %}" method="post" class="inline" onsubmit="return confirm('¿Está seguro de que desea dar de baja a este paciente?');">
+                                    <form action="{% url 'paciente_delete' paciente.pk %}" method="post" class="inline" onsubmit="return confirm('¿Está seguro de que desea dar de baja a este concurrente?');">
                                         {% csrf_token %}
                                         <button type="submit" class="text-red-600 hover:text-red-900">Eliminar</button>
                                     </form>
@@ -90,8 +90,8 @@
                 <svg class="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
                 </svg>
-                <h3 class="text-lg font-medium text-gray-900 mb-1">No hay pacientes registrados</h3>
-                <p class="text-gray-500 mb-4">Comienza registrando tu primer paciente.</p>
+                <h3 class="text-lg font-medium text-gray-900 mb-1">No hay concurrentes registrados</h3>
+                <p class="text-gray-500 mb-4">Comienza registrando tu primer concurrente.</p>
                 <a href="{% url 'paciente_create' %}" class="bg-primary-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-700 transition-colors inline-flex items-center">
                     <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
