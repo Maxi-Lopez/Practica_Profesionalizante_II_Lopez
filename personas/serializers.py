@@ -82,6 +82,15 @@ class PersonaSerializer(serializers.ModelSerializer):
     def validate_dni(self, value):
         if not value:
             return value
+        # Validar formato: solo dígitos
+        if not value.isdigit():
+            raise serializers.ValidationError("El DNI debe contener solo números.")
+        # Validar longitud
+        if len(value) < 7:
+            raise serializers.ValidationError("El DNI debe tener al menos 7 dígitos.")
+        if len(value) > 10:
+            raise serializers.ValidationError("El DNI no puede tener más de 10 dígitos.")
+        
         qs = Persona.objects.filter(dni=value)
         if self.instance:
             qs = qs.exclude(pk=self.instance.pk)
