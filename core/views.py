@@ -8,7 +8,7 @@ from django.urls import reverse_lazy
 
 from usuarios.models import Usuario
 from usuarios.forms import CustomUserCreationForm
-from core.forms import PacienteForm, EmpleadoForm, SalaForm, AreaInterdisciplinariaForm, DiagnosticoAreaForm, SeguimientoTrimestralForm
+from core.forms import PacienteForm, EmpleadoForm, DocumentoForm, SalaForm, AreaInterdisciplinariaForm, DiagnosticoAreaForm, SeguimientoTrimestralForm
 from pacientes.models import Sala, AreaInterdisciplinaria, DiagnosticoArea, SeguimientoTrimestral
 
 
@@ -314,6 +314,75 @@ class EmpleadoDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView
     def delete(self, request, *args, **kwargs):
         messages.success(request, 'Empleado dado de baja exitosamente.')
         return super().delete(request, *args, **kwargs)
+
+
+# ============================================================
+# DOCUMENTOS CRUD (HTML)
+# ============================================================
+
+class DocumentoCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+    model = None
+    form_class = DocumentoForm
+    template_name = 'documentos/form.html'
+    success_url = reverse_lazy('documentos_list')
+    login_url = 'login'
+    permission_required = 'documentos.add_documento'
+
+    def get_permission_required(self):
+        if self.request.user.is_superuser:
+            return ()
+        return ('documentos.add_documento',)
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Documento creado exitosamente.')
+        return super().form_valid(form)
+
+
+class DocumentoUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+    model = None
+    form_class = DocumentoForm
+    template_name = 'documentos/form.html'
+    success_url = reverse_lazy('documentos_list')
+    login_url = 'login'
+    permission_required = 'documentos.change_documento'
+    pk_url_kwarg = 'pk'
+
+    def get_permission_required(self):
+        if self.request.user.is_superuser:
+            return ()
+        return ('documentos.change_documento',)
+
+    def get_object(self, queryset=None):
+        from documentos.models import Documento
+        return Documento.objects.filter(activo=True).get(pk=self.kwargs['pk'])
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Documento actualizado exitosamente.')
+        return super().form_valid(form)
+
+
+class DocumentoDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
+    template_name = 'documentos/confirm_delete.html'
+    success_url = reverse_lazy('documentos_list')
+    login_url = 'login'
+    permission_required = 'documentos.delete_documento'
+    pk_url_kwarg = 'pk'
+
+    def get_permission_required(self):
+        if self.request.user.is_superuser:
+            return ()
+        return ('documentos.delete_documento',)
+
+    def get_object(self, queryset=None):
+        from documentos.models import Documento
+        return Documento.objects.filter(activo=True).get(pk=self.kwargs['pk'])
+
+    def form_valid(self, form):
+        self.object = self.get_object()
+        self.object.activo = False
+        self.object.save()
+        messages.success(self.request, 'Documento dado de baja exitosamente.')
+        return redirect(self.success_url)
 
 
 # ============================================================

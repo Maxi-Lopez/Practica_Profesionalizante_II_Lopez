@@ -4,6 +4,7 @@ from pacientes.models import (
     DiagnosticoArea, SeguimientoTrimestral
 )
 from empleados.models import Empleado, Rol
+from documentos.models import Documento
 from personas.models import Persona, Localidad
 
 
@@ -629,3 +630,74 @@ class SeguimientoTrimestralForm(forms.ModelForm):
         self.fields['paciente'].queryset = Paciente.objects.filter(activo=True).select_related('persona').order_by('persona__apellido', 'persona__nombre')
         self.fields['area'].queryset = AreaInterdisciplinaria.objects.filter(activo=True).order_by('nombre')
         self.fields['profesional'].queryset = Empleado.objects.filter(activo=True).select_related('persona').order_by('persona__apellido', 'persona__nombre')
+
+
+class DocumentoForm(forms.ModelForm):
+    persona = forms.ModelChoiceField(
+        queryset=Persona.objects.filter(activo=True).order_by('apellido', 'nombre'),
+        label="Persona",
+        empty_label="Seleccionar persona",
+        widget=forms.Select(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'})
+    )
+    tipo = forms.ChoiceField(
+        choices=Documento.TipoDocumento.choices,
+        label="Tipo",
+        widget=forms.Select(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'})
+    )
+    nombre = forms.CharField(
+        max_length=200,
+        label="Nombre",
+        widget=forms.TextInput(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'})
+    )
+    archivo = forms.FileField(
+        label="Archivo",
+        widget=forms.ClearableFileInput(attrs={'accept': '.pdf,.jpg,.jpeg,.png', 'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'})
+    )
+    descripcion = forms.CharField(
+        required=False,
+        label="Descripción",
+        widget=forms.Textarea(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors', 'rows': 4})
+    )
+    fecha_documento = forms.DateField(
+        required=False,
+        label="Fecha del Documento",
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'})
+    )
+    fecha_vencimiento = forms.DateField(
+        required=False,
+        label="Fecha de Vencimiento",
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'})
+    )
+
+    class Meta:
+        model = Documento
+        fields = ['persona', 'tipo', 'nombre', 'archivo', 'descripcion', 'fecha_documento', 'fecha_vencimiento']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['persona'].queryset = Persona.objects.filter(activo=True).order_by('apellido', 'nombre')
+
+    def clean_archivo(self):
+        archivo = self.cleaned_data.get('archivo')
+        if archivo:
+            # Validar extensión
+            ext = archivo.name.lower().rsplit('.', 1)[-1] if '.' in archivo.name else ''
+            extensiones_permitidas = ['pdf', 'jpg', 'jpeg', 'png']
+            if ext not in extensiones_permitidas:
+                raise forms.ValidationError("Extensión de archivo no permitida. Solo se permiten: .pdf, .jpg, .jpeg, .png")
+            
+            # Validar tamaño (10 MB = 10 * 1024 * 1024 bytes)
+            max_size = 10 * 1024 * 1024
+            if archivo.size > max_size:
+                raise forms.ValidationError("El archivo supera el tamaño máximo permitido de 10 MB.")
+        return archivo
+
+    def clean(self):
+        cleaned_data = super().clean()
+        fecha_documento = cleaned_data.get('fecha_documento')
+        fecha_vencimiento = cleaned_data.get('fecha_vencimiento')
+        
+        if fecha_vencimiento and fecha_documento and fecha_vencimiento <= fecha_documento:
+            self.add_error('fecha_vencimiento', "La fecha de vencimiento debe ser posterior a la fecha del documento.")
+        
+        return cleaned_data
