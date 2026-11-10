@@ -8,7 +8,7 @@ from django.urls import reverse_lazy
 
 from usuarios.models import Usuario
 from usuarios.forms import CustomUserCreationForm
-from core.forms import PacienteForm
+from core.forms import PacienteForm, EmpleadoForm
 
 
 class HomeView(TemplateView):
@@ -247,3 +247,69 @@ class DocumentosListView(LoginRequiredMixin, TemplateView):
         from documentos.models import Documento
         context['documentos'] = Documento.objects.select_related('persona').filter(activo=True).order_by('-fecha_creacion')
         return context
+
+
+# ============================================================
+# EMPLEADOS CRUD (HTML)
+# ============================================================
+
+class EmpleadoCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+    model = None
+    form_class = EmpleadoForm
+    template_name = 'empleados/form.html'
+    success_url = reverse_lazy('empleados_list')
+    login_url = 'login'
+    permission_required = 'empleados.add_empleado'
+    
+    def get_permission_required(self):
+        if self.request.user.is_superuser:
+            return ()
+        return ('empleados.add_empleado',)
+    
+    def form_valid(self, form):
+        messages.success(self.request, 'Empleado creado exitosamente.')
+        return super().form_valid(form)
+
+
+class EmpleadoUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+    model = None
+    form_class = EmpleadoForm
+    template_name = 'empleados/form.html'
+    success_url = reverse_lazy('empleados_list')
+    login_url = 'login'
+    permission_required = 'empleados.change_empleado'
+    pk_url_kwarg = 'pk'
+    
+    def get_permission_required(self):
+        if self.request.user.is_superuser:
+            return ()
+        return ('empleados.change_empleado',)
+    
+    def get_object(self, queryset=None):
+        from empleados.models import Empleado
+        return Empleado.objects.select_related('persona').get(pk=self.kwargs['pk'])
+    
+    def form_valid(self, form):
+        messages.success(self.request, 'Empleado actualizado exitosamente.')
+        return super().form_valid(form)
+
+
+class EmpleadoDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
+    template_name = 'empleados/confirm_delete.html'
+    success_url = reverse_lazy('empleados_list')
+    login_url = 'login'
+    permission_required = 'empleados.delete_empleado'
+    pk_url_kwarg = 'pk'
+    
+    def get_permission_required(self):
+        if self.request.user.is_superuser:
+            return ()
+        return ('empleados.delete_empleado',)
+    
+    def get_object(self, queryset=None):
+        from empleados.models import Empleado
+        return Empleado.objects.select_related('persona').get(pk=self.kwargs['pk'])
+    
+    def delete(self, request, *args, **kwargs):
+        messages.success(request, 'Empleado dado de baja exitosamente.')
+        return super().delete(request, *args, **kwargs)

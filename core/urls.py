@@ -11,6 +11,9 @@ from .views import (
     TurnosListView,
     TratamientosListView,
     EmpleadosListView,
+    EmpleadoCreateView,
+    EmpleadoUpdateView,
+    EmpleadoDeleteView,
     ServiciosListView,
     FacturacionListView,
     InventarioListView,
@@ -30,10 +33,15 @@ urlpatterns = [
     path('pacientes/editar/<int:pk>/', PacienteUpdateView.as_view(), name='paciente_update'),
     path('pacientes/eliminar/<int:pk>/', PacienteDeleteView.as_view(), name='paciente_delete'),
     
+    # Empleados CRUD
+    path('empleados/', EmpleadosListView.as_view(), name='empleados_list'),
+    path('empleados/crear/', EmpleadoCreateView.as_view(), name='empleado_create'),
+    path('empleados/editar/<int:pk>/', EmpleadoUpdateView.as_view(), name='empleado_update'),
+    path('empleados/eliminar/<int:pk>/', EmpleadoDeleteView.as_view(), name='empleado_delete'),
+    
     # Listados (requieren login)
     path('turnos/', TurnosListView.as_view(), name='turnos_list'),
     path('tratamientos/', TratamientosListView.as_view(), name='tratamientos_list'),
-    path('empleados/', EmpleadosListView.as_view(), name='empleados_list'),
     path('servicios/', ServiciosListView.as_view(), name='servicios_list'),
     path('facturacion/', FacturacionListView.as_view(), name='facturacion_list'),
     path('inventario/', InventarioListView.as_view(), name='inventario_list'),
