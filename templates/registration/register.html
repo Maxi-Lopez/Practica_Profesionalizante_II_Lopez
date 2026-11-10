@@ -15,7 +15,7 @@
             <p class="text-gray-600 mt-2">Regístrate como concurrente en Centro de Día Proyectar</p>
         </div>
 
-        <form method="post" class="space-y-6">
+        <form method="post" action="{% url 'register' %}" class="space-y-6">
             {% csrf_token %}
             
             {% if form.non_field_errors %}
