@@ -15,7 +15,7 @@
             <div class="flex items-center space-x-4">
                 {% if user.is_authenticated %}
                     <div class="hidden md:flex items-center space-x-6">
-                        <a href="{% url 'pacientes_list' %}" class="text-gray-600 hover:text-primary-600 font-medium transition-colors">Pacientes</a>
+                        <a href="{% url 'pacientes_list' %}" class="text-gray-600 hover:text-primary-600 font-medium transition-colors">Concurrentes</a>
                         <a href="{% url 'turnos_list' %}" class="text-gray-600 hover:text-primary-600 font-medium transition-colors">Turnos</a>
                         <a href="{% url 'tratamientos_list' %}" class="text-gray-600 hover:text-primary-600 font-medium transition-colors">Tratamientos</a>
                         <a href="{% url 'empleados_list' %}" class="text-gray-600 hover:text-primary-600 font-medium transition-colors">Empleados</a>

@@ -27,8 +27,9 @@ class TestPersonaViews:
         response = self.client.get(url)
 
         assert response.status_code == status.HTTP_200_OK
-        assert 'results' in response.data
-        assert len(response.data['results']) >= 1
+        # La respuesta es una lista directa (sin paginación en este ViewSet)
+        assert isinstance(response.data, list)
+        assert len(response.data) >= 1
 
     def test_get_persona_get_detalle_devuelve_200(self):
         """Verificar que GET /api/personas/persona-get/{id}/ devuelva 200 OK."""
@@ -73,8 +74,9 @@ class TestPersonaViews:
         response = self.client.get(url, {'search': 'Test'})
 
         assert response.status_code == status.HTTP_200_OK
-        assert len(response.data['results']) >= 1
-        assert any(p['dni'] == '12345678' for p in response.data['results'])
+        assert isinstance(response.data, list)
+        assert len(response.data) >= 1
+        assert any(p['dni'] == '12345678' for p in response.data)
 
     def test_filtro_por_localidad_persona_get(self):
         """Verificar que el filtro por localidad funcione."""
@@ -82,8 +84,9 @@ class TestPersonaViews:
         response = self.client.get(url, {'localidad': self.localidad.id})
 
         assert response.status_code == status.HTTP_200_OK
-        assert len(response.data['results']) >= 1
-        assert all(p['localidad']['id'] == self.localidad.id for p in response.data['results'])
+        assert isinstance(response.data, list)
+        assert len(response.data) >= 1
+        assert all(p['localidad']['id'] == self.localidad.id for p in response.data)
 
     def test_ordenamiento_persona_get(self):
         """Verificar que el ordenamiento funcione."""
@@ -91,5 +94,6 @@ class TestPersonaViews:
         response = self.client.get(url, {'ordering': 'apellido'})
 
         assert response.status_code == status.HTTP_200_OK
-        apellidos = [p['apellido'] for p in response.data['results']]
+        assert isinstance(response.data, list)
+        apellidos = [p['apellido'] for p in response.data]
         assert apellidos == sorted(apellidos)

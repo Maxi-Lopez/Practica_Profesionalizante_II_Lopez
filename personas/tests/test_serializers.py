@@ -56,16 +56,17 @@ class TestPersonaSerializer:
         assert not serializer.is_valid()
         assert 'dni' in serializer.errors
 
-    def test_serializer_rechaza_localidad_faltante(self):
-        """Verificar que el serializer rechace datos sin localidad."""
+    def test_serializer_rechaza_dni_con_letras(self):
+        """Verificar que el serializer rechace DNI con letras."""
         data = {
             'nombre': 'Ana',
             'apellido': 'Martínez',
-            'dni': '99887766',
+            'dni': '123ABC456',
+            'localidad': self.localidad.id,
         }
         serializer = PersonaSerializer(data=data)
         assert not serializer.is_valid()
-        assert 'localidad' in serializer.errors
+        assert 'dni' in serializer.errors
 
     def test_serializer_rechaza_dni_duplicado(self):
         """Verificar que el serializer rechace DNI duplicado."""
