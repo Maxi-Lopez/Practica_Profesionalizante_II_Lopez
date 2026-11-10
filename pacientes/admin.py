@@ -1,6 +1,16 @@
 from django.contrib import admin
-from .models import ObraSocial, Paciente, ResponsablePaciente, TipoDiagnostico, Diagnostico, PacienteDiagnostico
-
+from .models import (
+    ObraSocial,
+    Paciente,
+    ResponsablePaciente,
+    TipoDiagnostico,
+    Diagnostico,
+    PacienteDiagnostico,
+    Sala,
+    AreaInterdisciplinaria,
+    DiagnosticoArea,
+    SeguimientoTrimestral,
+)
 
 class ResponsablePacienteInline(admin.TabularInline):
     model = ResponsablePaciente
@@ -81,3 +91,69 @@ class PacienteDiagnosticoAdmin(admin.ModelAdmin):
     search_fields = ['paciente__persona__nombre', 'paciente__persona__apellido', 'diagnostico__nombre']
     ordering = ['-fecha_registro']
     readonly_fields = ['fecha_registro']
+
+
+# ============================================================
+# DOMINIO CLÍNICO: Salas, Áreas, Diagnósticos y Seguimientos
+# ============================================================
+
+@admin.register(Sala)
+class SalaAdmin(admin.ModelAdmin):
+    list_display = ['nombre', 'orientador', 'activo', 'fecha_creacion']
+    list_filter = ['activo']
+    search_fields = [
+        'nombre',
+        'orientador__persona__nombre',
+        'orientador__persona__apellido',
+    ]
+    ordering = ['nombre']
+    readonly_fields = ['fecha_creacion', 'fecha_actualizacion']
+    autocomplete_fields = ['orientador']
+
+
+@admin.register(AreaInterdisciplinaria)
+class AreaInterdisciplinariaAdmin(admin.ModelAdmin):
+    list_display = ['nombre', 'descripcion', 'activo']
+    list_filter = ['activo', 'nombre']
+    search_fields = ['nombre', 'descripcion']
+    ordering = ['nombre']
+    readonly_fields = ['fecha_creacion', 'fecha_actualizacion']
+
+
+@admin.register(DiagnosticoArea)
+class DiagnosticoAreaAdmin(admin.ModelAdmin):
+    list_display = ['paciente', 'area', 'fecha', 'profesional', 'activo']
+    list_filter = ['area', 'activo', 'fecha']
+    search_fields = [
+        'paciente__persona__nombre',
+        'paciente__persona__apellido',
+        'paciente__historia_clinica',
+        'diagnostico',
+    ]
+    ordering = ['-fecha']
+    readonly_fields = ['fecha_creacion', 'fecha_actualizacion']
+    autocomplete_fields = ['paciente', 'area', 'profesional']
+    date_hierarchy = 'fecha'
+
+
+@admin.register(SeguimientoTrimestral)
+class SeguimientoTrimestralAdmin(admin.ModelAdmin):
+    list_display = [
+        'paciente',
+        'area',
+        'fecha',
+        'es_intervencion_mensual',
+        'profesional',
+        'activo',
+    ]
+    list_filter = ['area', 'es_intervencion_mensual', 'activo', 'fecha']
+    search_fields = [
+        'paciente__persona__nombre',
+        'paciente__persona__apellido',
+        'paciente__historia_clinica',
+        'observaciones',
+    ]
+    ordering = ['-fecha']
+    readonly_fields = ['fecha_creacion', 'fecha_actualizacion']
+    autocomplete_fields = ['paciente', 'area', 'profesional']
+    date_hierarchy = 'fecha'
