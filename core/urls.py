@@ -11,11 +11,30 @@ from .views import (
     TurnosListView,
     TratamientosListView,
     EmpleadosListView,
+    EmpleadoCreateView,
+    EmpleadoUpdateView,
+    EmpleadoDeleteView,
     ServiciosListView,
     FacturacionListView,
     InventarioListView,
     ComprasListView,
     DocumentosListView,
+    SalasListView,
+    SalaCreateView,
+    SalaUpdateView,
+    SalaDeleteView,
+    AreasListView,
+    AreaCreateView,
+    AreaUpdateView,
+    AreaDeleteView,
+    DiagnosticosListView,
+    DiagnosticoCreateView,
+    DiagnosticoUpdateView,
+    DiagnosticoDeleteView,
+    SeguimientosListView,
+    SeguimientoCreateView,
+    SeguimientoUpdateView,
+    SeguimientoDeleteView,
 )
 
 urlpatterns = [
@@ -30,10 +49,39 @@ urlpatterns = [
     path('pacientes/editar/<int:pk>/', PacienteUpdateView.as_view(), name='paciente_update'),
     path('pacientes/eliminar/<int:pk>/', PacienteDeleteView.as_view(), name='paciente_delete'),
     
+    # Empleados CRUD
+    path('empleados/', EmpleadosListView.as_view(), name='empleados_list'),
+    path('empleados/crear/', EmpleadoCreateView.as_view(), name='empleado_create'),
+    path('empleados/editar/<int:pk>/', EmpleadoUpdateView.as_view(), name='empleado_update'),
+    path('empleados/eliminar/<int:pk>/', EmpleadoDeleteView.as_view(), name='empleado_delete'),
+    
+    # Salas CRUD
+    path('salas/', SalasListView.as_view(), name='salas_list'),
+    path('salas/crear/', SalaCreateView.as_view(), name='sala_create'),
+    path('salas/editar/<int:pk>/', SalaUpdateView.as_view(), name='sala_update'),
+    path('salas/eliminar/<int:pk>/', SalaDeleteView.as_view(), name='sala_delete'),
+    
+    # Áreas CRUD
+    path('areas/', AreasListView.as_view(), name='areas_list'),
+    path('areas/crear/', AreaCreateView.as_view(), name='area_create'),
+    path('areas/editar/<int:pk>/', AreaUpdateView.as_view(), name='area_update'),
+    path('areas/eliminar/<int:pk>/', AreaDeleteView.as_view(), name='area_delete'),
+    
+    # Diagnósticos CRUD
+    path('diagnosticos/', DiagnosticosListView.as_view(), name='diagnosticos_list'),
+    path('diagnosticos/crear/', DiagnosticoCreateView.as_view(), name='diagnostico_create'),
+    path('diagnosticos/editar/<int:pk>/', DiagnosticoUpdateView.as_view(), name='diagnostico_update'),
+    path('diagnosticos/eliminar/<int:pk>/', DiagnosticoDeleteView.as_view(), name='diagnostico_delete'),
+    
+    # Seguimientos CRUD
+    path('seguimientos/', SeguimientosListView.as_view(), name='seguimientos_list'),
+    path('seguimientos/crear/', SeguimientoCreateView.as_view(), name='seguimiento_create'),
+    path('seguimientos/editar/<int:pk>/', SeguimientoUpdateView.as_view(), name='seguimiento_update'),
+    path('seguimientos/eliminar/<int:pk>/', SeguimientoDeleteView.as_view(), name='seguimiento_delete'),
+    
     # Listados (requieren login)
     path('turnos/', TurnosListView.as_view(), name='turnos_list'),
     path('tratamientos/', TratamientosListView.as_view(), name='tratamientos_list'),
-    path('empleados/', EmpleadosListView.as_view(), name='empleados_list'),
     path('servicios/', ServiciosListView.as_view(), name='servicios_list'),
     path('facturacion/', FacturacionListView.as_view(), name='facturacion_list'),
     path('inventario/', InventarioListView.as_view(), name='inventario_list'),

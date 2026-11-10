@@ -171,7 +171,7 @@ class TestTurnoModel:
         persona_prof2 = baker.make(
             Persona, nombre="Carlos", apellido="López", dni="11223344", localidad=self.localidad
         )
-        profesional2 = baker.make(Empleado, persona=persona_prof2)
+        profesional2 = baker.make(Empleado, persona=persona_prof2, matricula="MAT-999")
         baker.make(
             "empleados.EmpleadoRol",
             empleado=profesional2,

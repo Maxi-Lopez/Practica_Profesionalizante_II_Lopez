@@ -1,4 +1,4 @@
-from django.views.generic import TemplateView, CreateView, UpdateView, DeleteView
+from django.views.generic import TemplateView, CreateView, UpdateView, DeleteView, ListView
 from django.contrib.auth.views import LoginView, LogoutView
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.shortcuts import render, redirect
@@ -8,7 +8,8 @@ from django.urls import reverse_lazy
 
 from usuarios.models import Usuario
 from usuarios.forms import CustomUserCreationForm
-from core.forms import PacienteForm
+from core.forms import PacienteForm, EmpleadoForm, SalaForm, AreaInterdisciplinariaForm, DiagnosticoAreaForm, SeguimientoTrimestralForm
+from pacientes.models import Sala, AreaInterdisciplinaria, DiagnosticoArea, SeguimientoTrimestral
 
 
 class HomeView(TemplateView):
@@ -247,3 +248,393 @@ class DocumentosListView(LoginRequiredMixin, TemplateView):
         from documentos.models import Documento
         context['documentos'] = Documento.objects.select_related('persona').filter(activo=True).order_by('-fecha_creacion')
         return context
+
+
+# ============================================================
+# EMPLEADOS CRUD (HTML)
+# ============================================================
+
+class EmpleadoCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+    model = None
+    form_class = EmpleadoForm
+    template_name = 'empleados/form.html'
+    success_url = reverse_lazy('empleados_list')
+    login_url = 'login'
+    permission_required = 'empleados.add_empleado'
+    
+    def get_permission_required(self):
+        if self.request.user.is_superuser:
+            return ()
+        return ('empleados.add_empleado',)
+    
+    def form_valid(self, form):
+        messages.success(self.request, 'Empleado creado exitosamente.')
+        return super().form_valid(form)
+
+
+class EmpleadoUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+    model = None
+    form_class = EmpleadoForm
+    template_name = 'empleados/form.html'
+    success_url = reverse_lazy('empleados_list')
+    login_url = 'login'
+    permission_required = 'empleados.change_empleado'
+    pk_url_kwarg = 'pk'
+    
+    def get_permission_required(self):
+        if self.request.user.is_superuser:
+            return ()
+        return ('empleados.change_empleado',)
+    
+    def get_object(self, queryset=None):
+        from empleados.models import Empleado
+        return Empleado.objects.select_related('persona').get(pk=self.kwargs['pk'])
+    
+    def form_valid(self, form):
+        messages.success(self.request, 'Empleado actualizado exitosamente.')
+        return super().form_valid(form)
+
+
+class EmpleadoDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
+    template_name = 'empleados/confirm_delete.html'
+    success_url = reverse_lazy('empleados_list')
+    login_url = 'login'
+    permission_required = 'empleados.delete_empleado'
+    pk_url_kwarg = 'pk'
+    
+    def get_permission_required(self):
+        if self.request.user.is_superuser:
+            return ()
+        return ('empleados.delete_empleado',)
+    
+    def get_object(self, queryset=None):
+        from empleados.models import Empleado
+        return Empleado.objects.select_related('persona').get(pk=self.kwargs['pk'])
+    
+    def delete(self, request, *args, **kwargs):
+        messages.success(request, 'Empleado dado de baja exitosamente.')
+        return super().delete(request, *args, **kwargs)
+
+
+# ============================================================
+# SALAS CRUD (HTML)
+# ============================================================
+
+class SalasListView(LoginRequiredMixin, ListView):
+    model = Sala
+    template_name = 'salas/list.html'
+    context_object_name = 'salas'
+    paginate_by = 20
+    login_url = 'login'
+
+    def get_queryset(self):
+        return Sala.objects.filter(activo=True).select_related('orientador__persona').order_by('nombre')
+
+
+class SalaCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+    model = None
+    form_class = SalaForm
+    template_name = 'salas/form.html'
+    success_url = reverse_lazy('salas_list')
+    login_url = 'login'
+    permission_required = 'pacientes.add_sala'
+
+    def get_permission_required(self):
+        if self.request.user.is_superuser:
+            return ()
+        return ('pacientes.add_sala',)
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Sala creada exitosamente.')
+        return super().form_valid(form)
+
+
+class SalaUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+    model = None
+    form_class = SalaForm
+    template_name = 'salas/form.html'
+    success_url = reverse_lazy('salas_list')
+    login_url = 'login'
+    permission_required = 'pacientes.change_sala'
+    pk_url_kwarg = 'pk'
+
+    def get_permission_required(self):
+        if self.request.user.is_superuser:
+            return ()
+        return ('pacientes.change_sala',)
+
+    def get_object(self, queryset=None):
+        return Sala.objects.select_related('orientador__persona').get(pk=self.kwargs['pk'])
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Sala actualizada exitosamente.')
+        return super().form_valid(form)
+
+
+class SalaDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
+    template_name = 'salas/confirm_delete.html'
+    success_url = reverse_lazy('salas_list')
+    login_url = 'login'
+    permission_required = 'pacientes.delete_sala'
+    pk_url_kwarg = 'pk'
+
+    def get_permission_required(self):
+        if self.request.user.is_superuser:
+            return ()
+        return ('pacientes.delete_sala',)
+
+    def get_object(self, queryset=None):
+        return Sala.objects.select_related('orientador__persona').get(pk=self.kwargs['pk'])
+
+    def form_valid(self, form):
+        self.object = self.get_object()
+        self.object.activo = False
+        self.object.save()
+        messages.success(self.request, 'Sala dada de baja exitosamente.')
+        return redirect(self.success_url)
+
+
+# ============================================================
+# ÁREAS INTERDISCIPLINARIAS CRUD (HTML)
+# ============================================================
+
+class AreasListView(LoginRequiredMixin, ListView):
+    model = AreaInterdisciplinaria
+    template_name = 'areas/list.html'
+    context_object_name = 'areas'
+    paginate_by = 20
+    login_url = 'login'
+
+    def get_queryset(self):
+        return AreaInterdisciplinaria.objects.filter(activo=True).order_by('nombre')
+
+
+class AreaCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+    model = None
+    form_class = AreaInterdisciplinariaForm
+    template_name = 'areas/form.html'
+    success_url = reverse_lazy('areas_list')
+    login_url = 'login'
+    permission_required = 'pacientes.add_areainterdisciplinaria'
+
+    def get_permission_required(self):
+        if self.request.user.is_superuser:
+            return ()
+        return ('pacientes.add_areainterdisciplinaria',)
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Área creada exitosamente.')
+        return super().form_valid(form)
+
+
+class AreaUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+    model = None
+    form_class = AreaInterdisciplinariaForm
+    template_name = 'areas/form.html'
+    success_url = reverse_lazy('areas_list')
+    login_url = 'login'
+    permission_required = 'pacientes.change_areainterdisciplinaria'
+    pk_url_kwarg = 'pk'
+
+    def get_permission_required(self):
+        if self.request.user.is_superuser:
+            return ()
+        return ('pacientes.change_areainterdisciplinaria',)
+
+    def get_object(self, queryset=None):
+        return AreaInterdisciplinaria.objects.get(pk=self.kwargs['pk'])
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Área actualizada exitosamente.')
+        return super().form_valid(form)
+
+
+class AreaDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
+    template_name = 'areas/confirm_delete.html'
+    success_url = reverse_lazy('areas_list')
+    login_url = 'login'
+    permission_required = 'pacientes.delete_areainterdisciplinaria'
+    pk_url_kwarg = 'pk'
+
+    def get_permission_required(self):
+        if self.request.user.is_superuser:
+            return ()
+        return ('pacientes.delete_areainterdisciplinaria',)
+
+    def get_object(self, queryset=None):
+        return AreaInterdisciplinaria.objects.get(pk=self.kwargs['pk'])
+
+    def form_valid(self, form):
+        self.object = self.get_object()
+        self.object.activo = False
+        self.object.save()
+        messages.success(self.request, 'Área dada de baja exitosamente.')
+        return redirect(self.success_url)
+
+
+# ============================================================
+# DIAGNÓSTICOS POR ÁREA CRUD (HTML)
+# ============================================================
+
+class DiagnosticosListView(LoginRequiredMixin, ListView):
+    model = DiagnosticoArea
+    template_name = 'diagnosticos/list.html'
+    context_object_name = 'diagnosticos'
+    paginate_by = 20
+    login_url = 'login'
+
+    def get_queryset(self):
+        return DiagnosticoArea.objects.filter(activo=True).select_related(
+            'paciente__persona', 'area', 'profesional__persona'
+        ).order_by('-fecha')
+
+
+class DiagnosticoCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+    model = None
+    form_class = DiagnosticoAreaForm
+    template_name = 'diagnosticos/form.html'
+    success_url = reverse_lazy('diagnosticos_list')
+    login_url = 'login'
+    permission_required = 'pacientes.add_diagnosticoarea'
+
+    def get_permission_required(self):
+        if self.request.user.is_superuser:
+            return ()
+        return ('pacientes.add_diagnosticoarea',)
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Diagnóstico creado exitosamente.')
+        return super().form_valid(form)
+
+
+class DiagnosticoUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+    model = None
+    form_class = DiagnosticoAreaForm
+    template_name = 'diagnosticos/form.html'
+    success_url = reverse_lazy('diagnosticos_list')
+    login_url = 'login'
+    permission_required = 'pacientes.change_diagnosticoarea'
+    pk_url_kwarg = 'pk'
+
+    def get_permission_required(self):
+        if self.request.user.is_superuser:
+            return ()
+        return ('pacientes.change_diagnosticoarea',)
+
+    def get_object(self, queryset=None):
+        return DiagnosticoArea.objects.select_related(
+            'paciente__persona', 'area', 'profesional__persona'
+        ).get(pk=self.kwargs['pk'])
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Diagnóstico actualizado exitosamente.')
+        return super().form_valid(form)
+
+
+class DiagnosticoDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
+    template_name = 'diagnosticos/confirm_delete.html'
+    success_url = reverse_lazy('diagnosticos_list')
+    login_url = 'login'
+    permission_required = 'pacientes.delete_diagnosticoarea'
+    pk_url_kwarg = 'pk'
+
+    def get_permission_required(self):
+        if self.request.user.is_superuser:
+            return ()
+        return ('pacientes.delete_diagnosticoarea',)
+
+    def get_object(self, queryset=None):
+        return DiagnosticoArea.objects.select_related(
+            'paciente__persona', 'area', 'profesional__persona'
+        ).get(pk=self.kwargs['pk'])
+
+    def form_valid(self, form):
+        self.object = self.get_object()
+        self.object.activo = False
+        self.object.save()
+        messages.success(self.request, 'Diagnóstico dado de baja exitosamente.')
+        return redirect(self.success_url)
+
+
+# ============================================================
+# SEGUIMIENTOS TRIMESTRALES CRUD (HTML)
+# ============================================================
+
+class SeguimientosListView(LoginRequiredMixin, ListView):
+    model = SeguimientoTrimestral
+    template_name = 'seguimientos/list.html'
+    context_object_name = 'seguimientos'
+    paginate_by = 20
+    login_url = 'login'
+
+    def get_queryset(self):
+        return SeguimientoTrimestral.objects.filter(activo=True).select_related(
+            'paciente__persona', 'area', 'profesional__persona'
+        ).order_by('-fecha')
+
+
+class SeguimientoCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+    model = None
+    form_class = SeguimientoTrimestralForm
+    template_name = 'seguimientos/form.html'
+    success_url = reverse_lazy('seguimientos_list')
+    login_url = 'login'
+    permission_required = 'pacientes.add_seguimientotrimestral'
+
+    def get_permission_required(self):
+        if self.request.user.is_superuser:
+            return ()
+        return ('pacientes.add_seguimientotrimestral',)
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Seguimiento creado exitosamente.')
+        return super().form_valid(form)
+
+
+class SeguimientoUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+    model = None
+    form_class = SeguimientoTrimestralForm
+    template_name = 'seguimientos/form.html'
+    success_url = reverse_lazy('seguimientos_list')
+    login_url = 'login'
+    permission_required = 'pacientes.change_seguimientotrimestral'
+    pk_url_kwarg = 'pk'
+
+    def get_permission_required(self):
+        if self.request.user.is_superuser:
+            return ()
+        return ('pacientes.change_seguimientotrimestral',)
+
+    def get_object(self, queryset=None):
+        return SeguimientoTrimestral.objects.select_related(
+            'paciente__persona', 'area', 'profesional__persona'
+        ).get(pk=self.kwargs['pk'])
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Seguimiento actualizado exitosamente.')
+        return super().form_valid(form)
+
+
+class SeguimientoDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
+    template_name = 'seguimientos/confirm_delete.html'
+    success_url = reverse_lazy('seguimientos_list')
+    login_url = 'login'
+    permission_required = 'pacientes.delete_seguimientotrimestral'
+    pk_url_kwarg = 'pk'
+
+    def get_permission_required(self):
+        if self.request.user.is_superuser:
+            return ()
+        return ('pacientes.delete_seguimientotrimestral',)
+
+    def get_object(self, queryset=None):
+        return SeguimientoTrimestral.objects.select_related(
+            'paciente__persona', 'area', 'profesional__persona'
+        ).get(pk=self.kwargs['pk'])
+
+    def form_valid(self, form):
+        self.object = self.get_object()
+        self.object.activo = False
+        self.object.save()
+        messages.success(self.request, 'Seguimiento dado de baja exitosamente.')
+        return redirect(self.success_url)
