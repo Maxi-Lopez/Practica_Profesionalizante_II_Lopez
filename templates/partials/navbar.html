@@ -24,7 +24,12 @@
                     
                     <div class="flex items-center space-x-4">
                         <span class="text-sm text-gray-600 hidden sm:block">{{ user.get_full_name|default:user.username }}</span>
-                        <a href="{% url 'logout' %}" class="text-gray-600 hover:text-primary-600 font-medium transition-colors">Cerrar sesión</a>
+                        <form method="post" action="{% url 'logout' %}" class="inline">
+                            {% csrf_token %}
+                            <button type="submit" class="text-gray-600 hover:text-primary-600 font-medium transition-colors">
+                                Cerrar sesión
+                            </button>
+                        </form>
                     </div>
                 {% else %}
                     <a href="{% url 'login' %}" class="text-gray-600 hover:text-primary-600 font-medium transition-colors">Iniciar sesión</a>
