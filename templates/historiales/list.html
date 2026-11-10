@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+
+{% block title %}Historiales Médicos - Centro de Día Proyectar{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Historiales Médicos</h1>
+            <p class="text-gray-600 mt-1">Registro de antecedentes y consultas médicas</p>
+        </div>
+        {% if perms.tratamientos.add_historialmedico %}
+        <a href="{% url 'historial_create' %}" class="bg-primary-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-700 transition-colors flex items-center justify-center">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+            </svg>
+            Nuevo Historial
+        </a>
+        {% endif %}
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6">
+        <form method="get" class="flex flex-col sm:flex-row gap-4">
+            <div class="flex-1">
+                <input type="text" name="search" value="{{ request.GET.search }}" placeholder="Buscar por paciente, profesional, descripción..." class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors">
+            </div>
+            <button type="submit" class="bg-primary-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-700 transition-colors whitespace-nowrap">Buscar</button>
+            {% if request.GET.search %}
+                <a href="{% url 'historiales_list' %}" class="px-4 py-2 border border-gray-300 rounded-lg font-medium hover:bg-gray-50 transition-colors whitespace-nowrap">Limpiar</a>
+            {% endif %}
+        </form>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        {% if historiales %}
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-50 border-b border-gray-200">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Paciente</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Profesional</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descripción</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Observaciones</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        {% for historial in historiales %}
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ historial.paciente.persona.nombre }} {{ historial.paciente.persona.apellido }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ historial.profesional.persona.nombre }} {{ historial.profesional.persona.apellido }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ historial.fecha|date:"d/m/Y H:i" }}</td>
+                                <td class="px-6 py-4 text-sm text-gray-700 max-w-xs truncate">{{ historial.descripcion }}</td>
+                                <td class="px-6 py-4 text-sm text-gray-700 max-w-xs truncate">{{ historial.observaciones|default:"—" }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                    {% if perms.tratamientos.change_historialmedico %}
+                                    <a href="{% url 'historial_update' historial.pk %}" class="text-primary-600 hover:text-primary-900 mr-3">Editar</a>
+                                    {% endif %}
+                                    {% if perms.tratamientos.delete_historialmedico %}
+                                    <form action="{% url 'historial_delete' historial.pk %}" method="post" class="inline" onsubmit="return confirm('¿Está seguro de que desea dar de baja a este historial médico?');">
+                                        {% csrf_token %}
+                                        <button type="submit" class="text-red-600 hover:text-red-900">Eliminar</button>
+                                    </form>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="p-12 text-center">
+                <svg class="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                <h3 class="text-lg font-medium text-gray-900 mb-1">No hay historiales médicos registrados</h3>
+                <p class="text-gray-500 mb-4">Comienza registrando tu primer historial médico.</p>
+                {% if perms.tratamientos.add_historialmedico %}
+                <a href="{% url 'historial_create' %}" class="bg-primary-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-700 transition-colors inline-flex items-center">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                    </svg>
+                    Crear el primero
+                </a>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

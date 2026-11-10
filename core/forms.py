@@ -8,6 +8,11 @@ from documentos.models import Documento
 from personas.models import Persona, Localidad
 from compras.models import Proveedor, Compra, DetalleCompra, TipoGasto, Gasto
 from inventario.models import Producto
+from tratamientos.models import (
+    PlanTratamiento, ObjetivoTratamiento, ActividadPlan,
+    HistorialMedico, EvolucionSemanal, RegistroActividad, NotaImportante
+)
+from servicios.models import Servicio
 
 
 class PacienteForm(forms.ModelForm):
@@ -881,3 +886,275 @@ class GastoForm(forms.ModelForm):
         if fecha and fecha > timezone.now().date():
             raise forms.ValidationError("La fecha no puede ser futura.")
         return fecha
+
+
+class PlanTratamientoForm(forms.ModelForm):
+    paciente = forms.ModelChoiceField(
+        queryset=Paciente.objects.filter(activo=True).select_related('persona').order_by('persona__apellido', 'persona__nombre'),
+        label="Paciente",
+        empty_label="Seleccionar paciente",
+        widget=forms.Select(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'})
+    )
+    nombre = forms.CharField(
+        max_length=150,
+        label="Nombre",
+        widget=forms.TextInput(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'})
+    )
+    descripcion = forms.CharField(
+        required=False,
+        label="Descripción",
+        widget=forms.Textarea(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors', 'rows': 3})
+    )
+    fecha_inicio = forms.DateField(
+        label="Fecha de Inicio",
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'})
+    )
+    fecha_fin = forms.DateField(
+        required=False,
+        label="Fecha de Fin",
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'})
+    )
+    observaciones = forms.CharField(
+        required=False,
+        label="Observaciones",
+        widget=forms.Textarea(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors', 'rows': 3})
+    )
+
+    class Meta:
+        model = PlanTratamiento
+        fields = ['paciente', 'nombre', 'descripcion', 'fecha_inicio', 'fecha_fin', 'observaciones']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['paciente'].queryset = Paciente.objects.filter(activo=True).select_related('persona').order_by('persona__apellido', 'persona__nombre')
+
+    def clean(self):
+        cleaned_data = super().clean()
+        fecha_inicio = cleaned_data.get('fecha_inicio')
+        fecha_fin = cleaned_data.get('fecha_fin')
+        if fecha_inicio and fecha_fin and fecha_fin < fecha_inicio:
+            self.add_error('fecha_fin', "La fecha de fin no puede ser anterior a la fecha de inicio.")
+        return cleaned_data
+
+
+class ObjetivoTratamientoForm(forms.ModelForm):
+    plan_tratamiento = forms.ModelChoiceField(
+        queryset=PlanTratamiento.objects.filter(activo=True).select_related('paciente__persona').order_by('-fecha_inicio'),
+        label="Plan de Tratamiento",
+        empty_label="Seleccionar plan",
+        widget=forms.Select(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'})
+    )
+    descripcion = forms.CharField(
+        label="Descripción",
+        widget=forms.Textarea(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors', 'rows': 3})
+    )
+    cumplido = forms.BooleanField(
+        required=False,
+        label="Cumplido",
+        widget=forms.CheckboxInput(attrs={'class': 'w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-2 focus:ring-primary-500'})
+    )
+
+    class Meta:
+        model = ObjetivoTratamiento
+        fields = ['plan_tratamiento', 'descripcion', 'cumplido']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['plan_tratamiento'].queryset = PlanTratamiento.objects.filter(activo=True).select_related('paciente__persona').order_by('-fecha_inicio')
+
+
+class ActividadPlanForm(forms.ModelForm):
+    plan_tratamiento = forms.ModelChoiceField(
+        queryset=PlanTratamiento.objects.filter(activo=True).select_related('paciente__persona').order_by('-fecha_inicio'),
+        label="Plan de Tratamiento",
+        empty_label="Seleccionar plan",
+        widget=forms.Select(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'})
+    )
+    servicio = forms.ModelChoiceField(
+        queryset=Servicio.objects.filter(activo=True).select_related('tipo_servicio').order_by('tipo_servicio__nombre', 'nombre'),
+        required=False,
+        label="Servicio",
+        empty_label="Seleccionar servicio (opcional)",
+        widget=forms.Select(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'})
+    )
+    descripcion = forms.CharField(
+        label="Descripción",
+        widget=forms.Textarea(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors', 'rows': 3})
+    )
+    frecuencia_semanal = forms.IntegerField(
+        required=False,
+        label="Frecuencia Semanal",
+        min_value=1,
+        widget=forms.NumberInput(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'})
+    )
+
+    class Meta:
+        model = ActividadPlan
+        fields = ['plan_tratamiento', 'servicio', 'descripcion', 'frecuencia_semanal']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['plan_tratamiento'].queryset = PlanTratamiento.objects.filter(activo=True).select_related('paciente__persona').order_by('-fecha_inicio')
+        self.fields['servicio'].queryset = Servicio.objects.filter(activo=True).select_related('tipo_servicio').order_by('tipo_servicio__nombre', 'nombre')
+
+    def clean_frecuencia_semanal(self):
+        frecuencia = self.cleaned_data.get('frecuencia_semanal')
+        if frecuencia is not None and frecuencia < 1:
+            raise forms.ValidationError("La frecuencia semanal debe ser mayor o igual a 1.")
+        return frecuencia
+
+
+class HistorialMedicoForm(forms.ModelForm):
+    paciente = forms.ModelChoiceField(
+        queryset=Paciente.objects.filter(activo=True).select_related('persona').order_by('persona__apellido', 'persona__nombre'),
+        label="Paciente",
+        empty_label="Seleccionar paciente",
+        widget=forms.Select(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'})
+    )
+    profesional = forms.ModelChoiceField(
+        queryset=Empleado.objects.filter(activo=True).select_related('persona').order_by('persona__apellido', 'persona__nombre'),
+        label="Profesional",
+        empty_label="Seleccionar profesional",
+        widget=forms.Select(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'})
+    )
+    fecha = forms.DateTimeField(
+        label="Fecha",
+        widget=forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'})
+    )
+    descripcion = forms.CharField(
+        label="Descripción",
+        widget=forms.Textarea(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors', 'rows': 4})
+    )
+    observaciones = forms.CharField(
+        required=False,
+        label="Observaciones",
+        widget=forms.Textarea(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors', 'rows': 3})
+    )
+
+    class Meta:
+        model = HistorialMedico
+        fields = ['paciente', 'profesional', 'fecha', 'descripcion', 'observaciones']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['paciente'].queryset = Paciente.objects.filter(activo=True).select_related('persona').order_by('persona__apellido', 'persona__nombre')
+        self.fields['profesional'].queryset = Empleado.objects.filter(activo=True).select_related('persona').order_by('persona__apellido', 'persona__nombre')
+
+
+class EvolucionSemanalForm(forms.ModelForm):
+    paciente = forms.ModelChoiceField(
+        queryset=Paciente.objects.filter(activo=True).select_related('persona').order_by('persona__apellido', 'persona__nombre'),
+        label="Paciente",
+        empty_label="Seleccionar paciente",
+        widget=forms.Select(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'})
+    )
+    plan_tratamiento = forms.ModelChoiceField(
+        queryset=PlanTratamiento.objects.filter(activo=True).select_related('paciente__persona').order_by('-fecha_inicio'),
+        required=False,
+        label="Plan de Tratamiento",
+        empty_label="Seleccionar plan (opcional)",
+        widget=forms.Select(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'})
+    )
+    profesional = forms.ModelChoiceField(
+        queryset=Empleado.objects.filter(activo=True).select_related('persona').order_by('persona__apellido', 'persona__nombre'),
+        label="Profesional",
+        empty_label="Seleccionar profesional",
+        widget=forms.Select(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'})
+    )
+    fecha = forms.DateField(
+        label="Fecha",
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'})
+    )
+    descripcion = forms.CharField(
+        label="Descripción",
+        widget=forms.Textarea(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors', 'rows': 4})
+    )
+
+    class Meta:
+        model = EvolucionSemanal
+        fields = ['paciente', 'plan_tratamiento', 'profesional', 'fecha', 'descripcion']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['paciente'].queryset = Paciente.objects.filter(activo=True).select_related('persona').order_by('persona__apellido', 'persona__nombre')
+        self.fields['plan_tratamiento'].queryset = PlanTratamiento.objects.filter(activo=True).select_related('paciente__persona').order_by('-fecha_inicio')
+        self.fields['profesional'].queryset = Empleado.objects.filter(activo=True).select_related('persona').order_by('persona__apellido', 'persona__nombre')
+
+
+class RegistroActividadForm(forms.ModelForm):
+    paciente = forms.ModelChoiceField(
+        queryset=Paciente.objects.filter(activo=True).select_related('persona').order_by('persona__apellido', 'persona__nombre'),
+        label="Paciente",
+        empty_label="Seleccionar paciente",
+        widget=forms.Select(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'})
+    )
+    actividad = forms.ModelChoiceField(
+        queryset=ActividadPlan.objects.filter(activo=True).select_related('plan_tratamiento__paciente__persona', 'servicio').order_by('-plan_tratamiento__fecha_inicio'),
+        label="Actividad",
+        empty_label="Seleccionar actividad",
+        widget=forms.Select(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'})
+    )
+    profesional = forms.ModelChoiceField(
+        queryset=Empleado.objects.filter(activo=True).select_related('persona').order_by('persona__apellido', 'persona__nombre'),
+        label="Profesional",
+        empty_label="Seleccionar profesional",
+        widget=forms.Select(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'})
+    )
+    fecha = forms.DateTimeField(
+        label="Fecha",
+        widget=forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'})
+    )
+    descripcion = forms.CharField(
+        required=False,
+        label="Descripción",
+        widget=forms.Textarea(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors', 'rows': 3})
+    )
+    realizado = forms.BooleanField(
+        required=False,
+        label="Realizado",
+        initial=True,
+        widget=forms.CheckboxInput(attrs={'class': 'w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-2 focus:ring-primary-500'})
+    )
+
+    class Meta:
+        model = RegistroActividad
+        fields = ['paciente', 'actividad', 'profesional', 'fecha', 'descripcion', 'realizado']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['paciente'].queryset = Paciente.objects.filter(activo=True).select_related('persona').order_by('persona__apellido', 'persona__nombre')
+        self.fields['actividad'].queryset = ActividadPlan.objects.filter(activo=True).select_related('plan_tratamiento__paciente__persona', 'servicio').order_by('-plan_tratamiento__fecha_inicio')
+        self.fields['profesional'].queryset = Empleado.objects.filter(activo=True).select_related('persona').order_by('persona__apellido', 'persona__nombre')
+
+
+class NotaImportanteForm(forms.ModelForm):
+    paciente = forms.ModelChoiceField(
+        queryset=Paciente.objects.filter(activo=True).select_related('persona').order_by('persona__apellido', 'persona__nombre'),
+        label="Paciente",
+        empty_label="Seleccionar paciente",
+        widget=forms.Select(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'})
+    )
+    profesional = forms.ModelChoiceField(
+        queryset=Empleado.objects.filter(activo=True).select_related('persona').order_by('persona__apellido', 'persona__nombre'),
+        label="Profesional",
+        empty_label="Seleccionar profesional",
+        widget=forms.Select(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'})
+    )
+    titulo = forms.CharField(
+        max_length=150,
+        label="Título",
+        widget=forms.TextInput(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'})
+    )
+    descripcion = forms.CharField(
+        label="Descripción",
+        widget=forms.Textarea(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors', 'rows': 4})
+    )
+
+    class Meta:
+        model = NotaImportante
+        fields = ['paciente', 'profesional', 'titulo', 'descripcion']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['paciente'].queryset = Paciente.objects.filter(activo=True).select_related('persona').order_by('persona__apellido', 'persona__nombre')
+        self.fields['profesional'].queryset = Empleado.objects.filter(activo=True).select_related('persona').order_by('persona__apellido', 'persona__nombre')

@@ -54,6 +54,34 @@ from .views import (
     GastoCreateView,
     GastoUpdateView,
     GastoDeleteView,
+    PlanesListView,
+    PlanCreateView,
+    PlanUpdateView,
+    PlanDeleteView,
+    ObjetivosListView,
+    ObjetivoCreateView,
+    ObjetivoUpdateView,
+    ObjetivoDeleteView,
+    ActividadesListView,
+    ActividadCreateView,
+    ActividadUpdateView,
+    ActividadDeleteView,
+    HistorialesListView,
+    HistorialCreateView,
+    HistorialUpdateView,
+    HistorialDeleteView,
+    EvolucionesListView,
+    EvolucionCreateView,
+    EvolucionUpdateView,
+    EvolucionDeleteView,
+    RegistrosListView,
+    RegistroCreateView,
+    RegistroUpdateView,
+    RegistroDeleteView,
+    NotasListView,
+    NotaCreateView,
+    NotaUpdateView,
+    NotaDeleteView,
 )
 
 urlpatterns = [
@@ -134,4 +162,46 @@ urlpatterns = [
     path('servicios/', ServiciosListView.as_view(), name='servicios_list'),
     path('facturacion/', FacturacionListView.as_view(), name='facturacion_list'),
     path('inventario/', InventarioListView.as_view(), name='inventario_list'),
+    
+    # Planes de Tratamiento CRUD
+    path('planes/', PlanesListView.as_view(), name='planes_list'),
+    path('planes/crear/', PlanCreateView.as_view(), name='plan_create'),
+    path('planes/editar/<int:pk>/', PlanUpdateView.as_view(), name='plan_update'),
+    path('planes/eliminar/<int:pk>/', PlanDeleteView.as_view(), name='plan_delete'),
+    
+    # Objetivos de Tratamiento CRUD
+    path('objetivos/', ObjetivosListView.as_view(), name='objetivos_list'),
+    path('objetivos/crear/', ObjetivoCreateView.as_view(), name='objetivo_create'),
+    path('objetivos/editar/<int:pk>/', ObjetivoUpdateView.as_view(), name='objetivo_update'),
+    path('objetivos/eliminar/<int:pk>/', ObjetivoDeleteView.as_view(), name='objetivo_delete'),
+    
+    # Actividades de Plan CRUD
+    path('actividades/', ActividadesListView.as_view(), name='actividades_list'),
+    path('actividades/crear/', ActividadCreateView.as_view(), name='actividad_create'),
+    path('actividades/editar/<int:pk>/', ActividadUpdateView.as_view(), name='actividad_update'),
+    path('actividades/eliminar/<int:pk>/', ActividadDeleteView.as_view(), name='actividad_delete'),
+    
+    # Historiales Médicos CRUD
+    path('historiales/', HistorialesListView.as_view(), name='historiales_list'),
+    path('historiales/crear/', HistorialCreateView.as_view(), name='historial_create'),
+    path('historiales/editar/<int:pk>/', HistorialUpdateView.as_view(), name='historial_update'),
+    path('historiales/eliminar/<int:pk>/', HistorialDeleteView.as_view(), name='historial_delete'),
+    
+    # Evoluciones Semanales CRUD
+    path('evoluciones/', EvolucionesListView.as_view(), name='evoluciones_list'),
+    path('evoluciones/crear/', EvolucionCreateView.as_view(), name='evolucion_create'),
+    path('evoluciones/editar/<int:pk>/', EvolucionUpdateView.as_view(), name='evolucion_update'),
+    path('evoluciones/eliminar/<int:pk>/', EvolucionDeleteView.as_view(), name='evolucion_delete'),
+    
+    # Registros de Actividad CRUD
+    path('registros/', RegistrosListView.as_view(), name='registros_list'),
+    path('registros/crear/', RegistroCreateView.as_view(), name='registro_create'),
+    path('registros/editar/<int:pk>/', RegistroUpdateView.as_view(), name='registro_update'),
+    path('registros/eliminar/<int:pk>/', RegistroDeleteView.as_view(), name='registro_delete'),
+    
+    # Notas Importantes CRUD
+    path('notas/', NotasListView.as_view(), name='notas_list'),
+    path('notas/crear/', NotaCreateView.as_view(), name='nota_create'),
+    path('notas/editar/<int:pk>/', NotaUpdateView.as_view(), name='nota_update'),
+    path('notas/eliminar/<int:pk>/', NotaDeleteView.as_view(), name='nota_delete'),
 ]
