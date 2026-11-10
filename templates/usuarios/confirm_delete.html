@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+
+{% block title %}Eliminar Usuario - Centro de Día Proyectar{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center">
+        <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+            </svg>
+        </div>
+
+        <h1 class="text-2xl font-bold text-gray-900 mb-2">¿Eliminar usuario?</h1>
+        <p class="text-gray-600 mb-6">
+            Está a punto de dar de baja al usuario <strong>{{ object.username }}</strong> ({% if object.get_full_name %}{{ object.get_full_name }}{% else %}{{ object.email }}{% endif %}).
+        </p>
+
+        <div class="bg-gray-50 rounded-lg p-4 mb-6 text-left">
+            <p class="text-sm text-gray-700"><strong>Rol:</strong> {{ object.get_rol_display }}</p>
+            <p class="text-sm text-gray-700"><strong>Email:</strong> {{ object.email|default:"—" }}</p>
+            <p class="text-sm text-gray-700"><strong>Área:</strong> {{ object.area.get_nombre_display|default:"—" }}</p>
+        </div>
+
+        <p class="text-sm text-yellow-700 bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-6">
+            <strong>Nota:</strong> Esta acción realiza una baja lógica. El usuario no podrá acceder al sistema, pero sus datos se conservarán por integridad referencial.
+        </p>
+
+        <form method="post" class="flex flex-col sm:flex-row gap-4">
+            {% csrf_token %}
+            <button type="submit" class="bg-red-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-red-700 transition-colors flex-1">
+                Sí, dar de baja
+            </button>
+            <a href="{% url 'usuarios_list' %}" class="px-6 py-3 border border-gray-300 rounded-lg font-medium hover:bg-gray-50 transition-colors text-center flex-1">
+                Cancelar
+            </a>
+        </form>
+    </div>
+</div>
+{% endblock %}

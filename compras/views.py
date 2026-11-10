@@ -18,18 +18,13 @@ from .serializers import (
     GastoSerializer,
     GastoGetSerializer,
 )
-from core.permissions import EsAdminProfesionalRecepcionista
+from core.permissions import EsAdmin
 
 
 class BaseViewSet(viewsets.ModelViewSet):
-    permission_classes = [AllowAny]
+    permission_classes = [EsAdmin]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     ordering = ['-fecha_creacion']
-
-    def get_permissions(self):
-        if self.request.method == 'GET':
-            return [AllowAny()]
-        return [EsAdminProfesionalRecepcionista()]
 
     @action(detail=True, methods=['post'])
     def eliminado_logico(self, request, pk=None):
@@ -57,7 +52,7 @@ class ProveedorViewSet(BaseViewSet):
 class ProveedorGetViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Proveedor.objects.filter(activo=True).order_by('razon_social')
     serializer_class = ProveedorGetSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [EsAdmin]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['razon_social', 'cuit', 'email']
     filterset_fields = ['activo']
@@ -83,7 +78,7 @@ class CompraViewSet(BaseViewSet):
 class CompraGetViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Compra.objects.filter(anulada=False).select_related('proveedor').prefetch_related('detalles__producto').order_by('-fecha')
     serializer_class = CompraGetSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [EsAdmin]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['numero_comprobante', 'proveedor__razon_social', 'observaciones']
     filterset_fields = ['proveedor', 'anulada', 'fecha']
@@ -102,7 +97,7 @@ class DetalleCompraViewSet(BaseViewSet):
 class DetalleCompraGetViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = DetalleCompra.objects.select_related('compra__proveedor', 'producto').order_by('-compra__fecha')
     serializer_class = DetalleCompraGetSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [EsAdmin]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['producto__nombre', 'compra__numero_comprobante']
     filterset_fields = ['compra', 'producto']
@@ -121,7 +116,7 @@ class TipoGastoViewSet(BaseViewSet):
 class TipoGastoGetViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = TipoGasto.objects.filter(activo=True).order_by('nombre')
     serializer_class = TipoGastoGetSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [EsAdmin]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['nombre', 'descripcion']
     filterset_fields = ['activo']
@@ -147,7 +142,7 @@ class GastoViewSet(BaseViewSet):
 class GastoGetViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Gasto.objects.filter(anulado=False).select_related('tipo_gasto', 'proveedor').order_by('-fecha')
     serializer_class = GastoGetSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [EsAdmin]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['concepto', 'numero_comprobante', 'proveedor__razon_social', 'tipo_gasto__nombre']
     filterset_fields = ['tipo_gasto', 'proveedor', 'anulado', 'fecha']

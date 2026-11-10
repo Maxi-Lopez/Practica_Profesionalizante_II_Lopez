@@ -14,19 +14,13 @@ from .serializers import (
     HorarioEmpleadoSerializer,
     AsistenciaEmpleadoSerializer,
 )
-from personas.permissions import EsAdmin, EsProfesional, EsAdminOProfesional, EsAdminProfesionalRecepcionista
+from personas.permissions import EsAdmin
 
 
 class BaseViewSet(viewsets.ModelViewSet):
-    permission_classes = [AllowAny]
+    permission_classes = [EsAdmin]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     ordering = ['-fecha_creacion']
-
-    def get_permissions(self):
-        if self.request.method == 'GET':
-            return [AllowAny()]
-        # Escritura permitida para admin y profesional
-        return [EsAdminOProfesional()]
 
     @action(detail=True, methods=['post'])
     def eliminado_logico(self, request, pk=None):
@@ -94,7 +88,7 @@ class EmpleadoListViewSet(viewsets.ReadOnlyModelViewSet):
         'horarios'
     ).order_by('persona__apellido', 'persona__nombre')
     serializer_class = EmpleadoListSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [EsAdmin]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['persona__nombre', 'persona__apellido', 'persona__dni', 'matricula']
     filterset_fields = ['activo', 'persona__localidad', 'persona__localidad__provincia']
