@@ -1,5 +1,8 @@
 from django import forms
-from pacientes.models import Paciente, ObraSocial
+from pacientes.models import (
+    Paciente, ObraSocial, Sala, AreaInterdisciplinaria, 
+    DiagnosticoArea, SeguimientoTrimestral
+)
 from empleados.models import Empleado, Rol
 from personas.models import Persona, Localidad
 
@@ -494,3 +497,135 @@ class EmpleadoForm(forms.ModelForm):
                     )
         
         return empleado
+
+
+class SalaForm(forms.ModelForm):
+    nombre = forms.CharField(
+        max_length=100,
+        label="Nombre",
+        widget=forms.TextInput(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'})
+    )
+    orientador = forms.ModelChoiceField(
+        queryset=Empleado.objects.filter(activo=True).select_related('persona').order_by('persona__apellido', 'persona__nombre'),
+        required=False,
+        label="Orientador",
+        empty_label="Seleccionar orientador",
+        widget=forms.Select(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'})
+    )
+    planificacion_actividades = forms.CharField(
+        required=False,
+        label="Planificación de Actividades",
+        widget=forms.Textarea(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors', 'rows': 4})
+    )
+
+    class Meta:
+        model = Sala
+        fields = ['nombre', 'orientador', 'planificacion_actividades']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.pk:
+            self.fields['orientador'].queryset = Empleado.objects.filter(activo=True).select_related('persona').order_by('persona__apellido', 'persona__nombre')
+
+
+class AreaInterdisciplinariaForm(forms.ModelForm):
+    nombre = forms.ChoiceField(
+        choices=AreaInterdisciplinaria.NombreArea.choices,
+        label="Nombre",
+        widget=forms.Select(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'})
+    )
+    descripcion = forms.CharField(
+        required=False,
+        label="Descripción",
+        widget=forms.Textarea(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors', 'rows': 4})
+    )
+
+    class Meta:
+        model = AreaInterdisciplinaria
+        fields = ['nombre', 'descripcion']
+
+
+class DiagnosticoAreaForm(forms.ModelForm):
+    paciente = forms.ModelChoiceField(
+        queryset=Paciente.objects.filter(activo=True).select_related('persona').order_by('persona__apellido', 'persona__nombre'),
+        label="Paciente",
+        empty_label="Seleccionar paciente",
+        widget=forms.Select(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'})
+    )
+    area = forms.ModelChoiceField(
+        queryset=AreaInterdisciplinaria.objects.filter(activo=True).order_by('nombre'),
+        label="Área",
+        empty_label="Seleccionar área",
+        widget=forms.Select(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'})
+    )
+    fecha = forms.DateField(
+        label="Fecha",
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'})
+    )
+    diagnostico = forms.CharField(
+        label="Diagnóstico",
+        widget=forms.Textarea(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors', 'rows': 4})
+    )
+    profesional = forms.ModelChoiceField(
+        queryset=Empleado.objects.filter(activo=True).select_related('persona').order_by('persona__apellido', 'persona__nombre'),
+        required=False,
+        label="Profesional",
+        empty_label="Seleccionar profesional",
+        widget=forms.Select(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'})
+    )
+
+    class Meta:
+        model = DiagnosticoArea
+        fields = ['paciente', 'area', 'fecha', 'diagnostico', 'profesional']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['paciente'].queryset = Paciente.objects.filter(activo=True).select_related('persona').order_by('persona__apellido', 'persona__nombre')
+        self.fields['area'].queryset = AreaInterdisciplinaria.objects.filter(activo=True).order_by('nombre')
+        self.fields['profesional'].queryset = Empleado.objects.filter(activo=True).select_related('persona').order_by('persona__apellido', 'persona__nombre')
+
+
+class SeguimientoTrimestralForm(forms.ModelForm):
+    paciente = forms.ModelChoiceField(
+        queryset=Paciente.objects.filter(activo=True).select_related('persona').order_by('persona__apellido', 'persona__nombre'),
+        label="Paciente",
+        empty_label="Seleccionar paciente",
+        widget=forms.Select(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'})
+    )
+    area = forms.ModelChoiceField(
+        queryset=AreaInterdisciplinaria.objects.filter(activo=True).order_by('nombre'),
+        label="Área",
+        empty_label="Seleccionar área",
+        widget=forms.Select(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'})
+    )
+    fecha = forms.DateField(
+        label="Fecha",
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'})
+    )
+    observaciones = forms.CharField(
+        label="Observaciones",
+        widget=forms.Textarea(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors', 'rows': 4})
+    )
+    profesional = forms.ModelChoiceField(
+        queryset=Empleado.objects.filter(activo=True).select_related('persona').order_by('persona__apellido', 'persona__nombre'),
+        required=False,
+        label="Profesional",
+        empty_label="Seleccionar profesional",
+        widget=forms.Select(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'})
+    )
+    es_intervencion_mensual = forms.BooleanField(
+        required=False,
+        label="Intervención Mensual",
+        help_text="Marcar si es una intervención mensual (algunas áreas lo requieren)",
+        widget=forms.CheckboxInput(attrs={'class': 'w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-2 focus:ring-primary-500'})
+    )
+
+    class Meta:
+        model = SeguimientoTrimestral
+        fields = ['paciente', 'area', 'fecha', 'observaciones', 'profesional', 'es_intervencion_mensual']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['paciente'].queryset = Paciente.objects.filter(activo=True).select_related('persona').order_by('persona__apellido', 'persona__nombre')
+        self.fields['area'].queryset = AreaInterdisciplinaria.objects.filter(activo=True).order_by('nombre')
+        self.fields['profesional'].queryset = Empleado.objects.filter(activo=True).select_related('persona').order_by('persona__apellido', 'persona__nombre')

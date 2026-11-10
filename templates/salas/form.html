@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if object %}Editar Sala{% else %}Crear Sala{% endif %} - Centro de Día Proyectar{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <div class="mb-6">
+        <h1 class="text-2xl font-bold text-gray-900">{% if object %}Editar Sala{% else %}Crear Sala{% endif %}</h1>
+        <p class="text-gray-600 mt-1">{% if object %}Modifique los datos de la sala{% else %}Complete los datos para registrar una nueva sala{% endif %}</p>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <form method="post" class="space-y-6" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+                <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+                    {% for error in form.non_field_errors %}
+                        <p>{{ error }}</p>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <fieldset>
+                <legend class="text-lg font-semibold text-gray-900 mb-4 border-b border-gray-200 pb-2">Datos de la Sala</legend>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label for="{{ form.nombre.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
+                        {{ form.nombre }}
+                        {% if form.nombre.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.nombre.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <label for="{{ form.orientador.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Orientador</label>
+                        {{ form.orientador }}
+                        {% if form.orientador.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.orientador.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div>
+                    <label for="{{ form.planificacion_actividades.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Planificación de Actividades</label>
+                    {{ form.planificacion_actividades }}
+                    {% if form.planificacion_actividades.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.planificacion_actividades.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </fieldset>
+
+            <div class="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+                <a href="{% url 'salas_list' %}" class="px-4 py-2 border border-gray-300 rounded-lg font-medium hover:bg-gray-50 transition-colors">Cancelar</a>
+                <button type="submit" class="bg-primary-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-primary-700 transition-colors">Guardar</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
