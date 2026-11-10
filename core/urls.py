@@ -38,6 +38,22 @@ from .views import (
     SeguimientoCreateView,
     SeguimientoUpdateView,
     SeguimientoDeleteView,
+    ProveedoresListView,
+    ProveedorCreateView,
+    ProveedorUpdateView,
+    ProveedorDeleteView,
+    TiposGastoListView,
+    TipoGastoCreateView,
+    TipoGastoUpdateView,
+    TipoGastoDeleteView,
+    ComprasListView,
+    CompraCreateView,
+    CompraUpdateView,
+    CompraDeleteView,
+    GastosListView,
+    GastoCreateView,
+    GastoUpdateView,
+    GastoDeleteView,
 )
 
 urlpatterns = [
@@ -88,12 +104,34 @@ urlpatterns = [
     path('documentos/editar/<int:pk>/', DocumentoUpdateView.as_view(), name='documento_update'),
     path('documentos/eliminar/<int:pk>/', DocumentoDeleteView.as_view(), name='documento_delete'),
     
+    # Proveedores CRUD
+    path('proveedores/', ProveedoresListView.as_view(), name='proveedores_list'),
+    path('proveedores/crear/', ProveedorCreateView.as_view(), name='proveedor_create'),
+    path('proveedores/editar/<int:pk>/', ProveedorUpdateView.as_view(), name='proveedor_update'),
+    path('proveedores/eliminar/<int:pk>/', ProveedorDeleteView.as_view(), name='proveedor_delete'),
+    
+    # Tipos de Gasto CRUD
+    path('tipos-gasto/', TiposGastoListView.as_view(), name='tipos_gasto_list'),
+    path('tipos-gasto/crear/', TipoGastoCreateView.as_view(), name='tipo_gasto_create'),
+    path('tipos-gasto/editar/<int:pk>/', TipoGastoUpdateView.as_view(), name='tipo_gasto_update'),
+    path('tipos-gasto/eliminar/<int:pk>/', TipoGastoDeleteView.as_view(), name='tipo_gasto_delete'),
+    
+    # Compras CRUD
+    path('compras/', ComprasListView.as_view(), name='compras_list'),
+    path('compras/crear/', CompraCreateView.as_view(), name='compra_create'),
+    path('compras/editar/<int:pk>/', CompraUpdateView.as_view(), name='compra_update'),
+    path('compras/eliminar/<int:pk>/', CompraDeleteView.as_view(), name='compra_delete'),
+    
+    # Gastos CRUD
+    path('gastos/', GastosListView.as_view(), name='gastos_list'),
+    path('gastos/crear/', GastoCreateView.as_view(), name='gasto_create'),
+    path('gastos/editar/<int:pk>/', GastoUpdateView.as_view(), name='gasto_update'),
+    path('gastos/eliminar/<int:pk>/', GastoDeleteView.as_view(), name='gasto_delete'),
+    
     # Listados (requieren login)
     path('turnos/', TurnosListView.as_view(), name='turnos_list'),
     path('tratamientos/', TratamientosListView.as_view(), name='tratamientos_list'),
     path('servicios/', ServiciosListView.as_view(), name='servicios_list'),
     path('facturacion/', FacturacionListView.as_view(), name='facturacion_list'),
     path('inventario/', InventarioListView.as_view(), name='inventario_list'),
-    path('compras/', ComprasListView.as_view(), name='compras_list'),
-    path('documentos/', DocumentosListView.as_view(), name='documentos_list'),
 ]

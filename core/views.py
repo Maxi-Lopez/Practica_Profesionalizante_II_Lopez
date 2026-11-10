@@ -8,8 +8,9 @@ from django.urls import reverse_lazy
 
 from usuarios.models import Usuario
 from usuarios.forms import CustomUserCreationForm
-from core.forms import PacienteForm, EmpleadoForm, DocumentoForm, SalaForm, AreaInterdisciplinariaForm, DiagnosticoAreaForm, SeguimientoTrimestralForm
+from core.forms import PacienteForm, EmpleadoForm, DocumentoForm, SalaForm, AreaInterdisciplinariaForm, DiagnosticoAreaForm, SeguimientoTrimestralForm, ProveedorForm, TipoGastoForm, CompraForm, GastoForm
 from pacientes.models import Sala, AreaInterdisciplinaria, DiagnosticoArea, SeguimientoTrimestral
+from compras.models import Proveedor, Compra, TipoGasto, Gasto
 
 
 class HomeView(TemplateView):
@@ -706,4 +707,316 @@ class SeguimientoDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteV
         self.object.activo = False
         self.object.save()
         messages.success(self.request, 'Seguimiento dado de baja exitosamente.')
+        return redirect(self.success_url)
+
+
+# ============================================================
+# PROVEEDORES CRUD (HTML)
+# ============================================================
+
+class ProveedoresListView(LoginRequiredMixin, ListView):
+    model = Proveedor
+    template_name = 'proveedores/list.html'
+    context_object_name = 'proveedores'
+    paginate_by = 20
+    login_url = 'login'
+
+    def get_queryset(self):
+        return Proveedor.objects.filter(activo=True).order_by('razon_social')
+
+
+class ProveedorCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+    model = None
+    form_class = ProveedorForm
+    template_name = 'proveedores/form.html'
+    success_url = reverse_lazy('proveedores_list')
+    login_url = 'login'
+    permission_required = 'compras.add_proveedor'
+
+    def get_permission_required(self):
+        if self.request.user.is_superuser:
+            return ()
+        return ('compras.add_proveedor',)
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Proveedor creado exitosamente.')
+        return super().form_valid(form)
+
+
+class ProveedorUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+    model = None
+    form_class = ProveedorForm
+    template_name = 'proveedores/form.html'
+    success_url = reverse_lazy('proveedores_list')
+    login_url = 'login'
+    permission_required = 'compras.change_proveedor'
+    pk_url_kwarg = 'pk'
+
+    def get_permission_required(self):
+        if self.request.user.is_superuser:
+            return ()
+        return ('compras.change_proveedor',)
+
+    def get_object(self, queryset=None):
+        return Proveedor.objects.get(pk=self.kwargs['pk'])
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Proveedor actualizado exitosamente.')
+        return super().form_valid(form)
+
+
+class ProveedorDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
+    template_name = 'proveedores/confirm_delete.html'
+    success_url = reverse_lazy('proveedores_list')
+    login_url = 'login'
+    permission_required = 'compras.delete_proveedor'
+    pk_url_kwarg = 'pk'
+
+    def get_permission_required(self):
+        if self.request.user.is_superuser:
+            return ()
+        return ('compras.delete_proveedor',)
+
+    def get_object(self, queryset=None):
+        return Proveedor.objects.get(pk=self.kwargs['pk'])
+
+    def form_valid(self, form):
+        self.object = self.get_object()
+        self.object.activo = False
+        self.object.save()
+        messages.success(self.request, 'Proveedor dado de baja exitosamente.')
+        return redirect(self.success_url)
+
+
+# ============================================================
+# TIPOS DE GASTO CRUD (HTML)
+# ============================================================
+
+class TiposGastoListView(LoginRequiredMixin, ListView):
+    model = TipoGasto
+    template_name = 'tipos_gasto/list.html'
+    context_object_name = 'tipos_gasto'
+    paginate_by = 20
+    login_url = 'login'
+
+    def get_queryset(self):
+        return TipoGasto.objects.filter(activo=True).order_by('nombre')
+
+
+class TipoGastoCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+    model = None
+    form_class = TipoGastoForm
+    template_name = 'tipos_gasto/form.html'
+    success_url = reverse_lazy('tipos_gasto_list')
+    login_url = 'login'
+    permission_required = 'compras.add_tipogasto'
+
+    def get_permission_required(self):
+        if self.request.user.is_superuser:
+            return ()
+        return ('compras.add_tipogasto',)
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Tipo de gasto creado exitosamente.')
+        return super().form_valid(form)
+
+
+class TipoGastoUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+    model = None
+    form_class = TipoGastoForm
+    template_name = 'tipos_gasto/form.html'
+    success_url = reverse_lazy('tipos_gasto_list')
+    login_url = 'login'
+    permission_required = 'compras.change_tipogasto'
+    pk_url_kwarg = 'pk'
+
+    def get_permission_required(self):
+        if self.request.user.is_superuser:
+            return ()
+        return ('compras.change_tipogasto',)
+
+    def get_object(self, queryset=None):
+        return TipoGasto.objects.get(pk=self.kwargs['pk'])
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Tipo de gasto actualizado exitosamente.')
+        return super().form_valid(form)
+
+
+class TipoGastoDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
+    template_name = 'tipos_gasto/confirm_delete.html'
+    success_url = reverse_lazy('tipos_gasto_list')
+    login_url = 'login'
+    permission_required = 'compras.delete_tipogasto'
+    pk_url_kwarg = 'pk'
+
+    def get_permission_required(self):
+        if self.request.user.is_superuser:
+            return ()
+        return ('compras.delete_tipogasto',)
+
+    def get_object(self, queryset=None):
+        return TipoGasto.objects.get(pk=self.kwargs['pk'])
+
+    def form_valid(self, form):
+        self.object = self.get_object()
+        self.object.activo = False
+        self.object.save()
+        messages.success(self.request, 'Tipo de gasto dado de baja exitosamente.')
+        return redirect(self.success_url)
+
+
+# ============================================================
+# COMPRAS CRUD (HTML)
+# ============================================================
+
+class ComprasListView(LoginRequiredMixin, ListView):
+    model = Compra
+    template_name = 'compras/list.html'
+    context_object_name = 'compras'
+    paginate_by = 20
+    login_url = 'login'
+
+    def get_queryset(self):
+        return Compra.objects.filter(anulada=False).select_related('proveedor').order_by('-fecha')
+
+
+class CompraCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+    model = None
+    form_class = CompraForm
+    template_name = 'compras/form.html'
+    success_url = reverse_lazy('compras_list')
+    login_url = 'login'
+    permission_required = 'compras.add_compra'
+
+    def get_permission_required(self):
+        if self.request.user.is_superuser:
+            return ()
+        return ('compras.add_compra',)
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Compra creada exitosamente.')
+        return super().form_valid(form)
+
+
+class CompraUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+    model = None
+    form_class = CompraForm
+    template_name = 'compras/form.html'
+    success_url = reverse_lazy('compras_list')
+    login_url = 'login'
+    permission_required = 'compras.change_compra'
+    pk_url_kwarg = 'pk'
+
+    def get_permission_required(self):
+        if self.request.user.is_superuser:
+            return ()
+        return ('compras.change_compra',)
+
+    def get_object(self, queryset=None):
+        return Compra.objects.select_related('proveedor').get(pk=self.kwargs['pk'])
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Compra actualizada exitosamente.')
+        return super().form_valid(form)
+
+
+class CompraDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
+    template_name = 'compras/confirm_delete.html'
+    success_url = reverse_lazy('compras_list')
+    login_url = 'login'
+    permission_required = 'compras.delete_compra'
+    pk_url_kwarg = 'pk'
+
+    def get_permission_required(self):
+        if self.request.user.is_superuser:
+            return ()
+        return ('compras.delete_compra',)
+
+    def get_object(self, queryset=None):
+        return Compra.objects.select_related('proveedor').get(pk=self.kwargs['pk'])
+
+    def form_valid(self, form):
+        self.object = self.get_object()
+        self.object.anulada = True
+        self.object.save()
+        messages.success(self.request, 'Compra anulada exitosamente.')
+        return redirect(self.success_url)
+
+
+# ============================================================
+# GASTOS CRUD (HTML)
+# ============================================================
+
+class GastosListView(LoginRequiredMixin, ListView):
+    model = Gasto
+    template_name = 'gastos/list.html'
+    context_object_name = 'gastos'
+    paginate_by = 20
+    login_url = 'login'
+
+    def get_queryset(self):
+        return Gasto.objects.filter(anulado=False).select_related('tipo_gasto', 'proveedor').order_by('-fecha')
+
+
+class GastoCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+    model = None
+    form_class = GastoForm
+    template_name = 'gastos/form.html'
+    success_url = reverse_lazy('gastos_list')
+    login_url = 'login'
+    permission_required = 'compras.add_gasto'
+
+    def get_permission_required(self):
+        if self.request.user.is_superuser:
+            return ()
+        return ('compras.add_gasto',)
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Gasto creado exitosamente.')
+        return super().form_valid(form)
+
+
+class GastoUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+    model = None
+    form_class = GastoForm
+    template_name = 'gastos/form.html'
+    success_url = reverse_lazy('gastos_list')
+    login_url = 'login'
+    permission_required = 'compras.change_gasto'
+    pk_url_kwarg = 'pk'
+
+    def get_permission_required(self):
+        if self.request.user.is_superuser:
+            return ()
+        return ('compras.change_gasto',)
+
+    def get_object(self, queryset=None):
+        return Gasto.objects.select_related('tipo_gasto', 'proveedor').get(pk=self.kwargs['pk'])
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Gasto actualizado exitosamente.')
+        return super().form_valid(form)
+
+
+class GastoDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
+    template_name = 'gastos/confirm_delete.html'
+    success_url = reverse_lazy('gastos_list')
+    login_url = 'login'
+    permission_required = 'compras.delete_gasto'
+    pk_url_kwarg = 'pk'
+
+    def get_permission_required(self):
+        if self.request.user.is_superuser:
+            return ()
+        return ('compras.delete_gasto',)
+
+    def get_object(self, queryset=None):
+        return Gasto.objects.select_related('tipo_gasto', 'proveedor').get(pk=self.kwargs['pk'])
+
+    def form_valid(self, form):
+        self.object = self.get_object()
+        self.object.anulado = True
+        self.object.save()
+        messages.success(self.request, 'Gasto anulado exitosamente.')
         return redirect(self.success_url)

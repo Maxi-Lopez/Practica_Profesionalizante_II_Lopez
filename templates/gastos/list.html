@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+
+{% block title %}Gastos - Centro de Día Proyectar{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Gastos</h1>
+            <p class="text-gray-600 mt-1">Gestión de gastos operativos</p>
+        </div>
+        {% if perms.compras.add_gasto %}
+        <a href="{% url 'gasto_create' %}" class="bg-primary-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-700 transition-colors flex items-center justify-center">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+            </svg>
+            Nuevo Gasto
+        </a>
+        {% endif %}
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6">
+        <form method="get" class="flex flex-col sm:flex-row gap-4">
+            <div class="flex-1">
+                <input type="text" name="search" value="{{ request.GET.search }}" placeholder="Buscar por concepto, proveedor, tipo de gasto..." class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors">
+            </div>
+            <button type="submit" class="bg-primary-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-700 transition-colors whitespace-nowrap">Buscar</button>
+            {% if request.GET.search %}
+                <a href="{% url 'gastos_list' %}" class="px-4 py-2 border border-gray-300 rounded-lg font-medium hover:bg-gray-50 transition-colors whitespace-nowrap">Limpiar</a>
+            {% endif %}
+        </form>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        {% if gastos %}
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-50 border-b border-gray-200">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Concepto</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo de Gasto</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Proveedor</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monto</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">N° Comprobante</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        {% for gasto in gastos %}
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ gasto.concepto }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ gasto.tipo_gasto.nombre }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ gasto.proveedor.razon_social|default:"—" }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ gasto.fecha|date:"d/m/Y" }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${{ gasto.monto|floatformat:2 }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ gasto.numero_comprobante|default:"—" }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    {% if gasto.anulado %}
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Anulado</span>
+                                    {% else %}
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Activo</span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                    {% if perms.compras.change_gasto and not gasto.anulado %}
+                                    <a href="{% url 'gasto_update' gasto.pk %}" class="text-primary-600 hover:text-primary-900 mr-3">Editar</a>
+                                    {% endif %}
+                                    {% if perms.compras.delete_gasto and not gasto.anulado %}
+                                    <form action="{% url 'gasto_delete' gasto.pk %}" method="post" class="inline" onsubmit="return confirm('¿Está seguro de que desea anular este gasto?');">
+                                        {% csrf_token %}
+                                        <button type="submit" class="text-red-600 hover:text-red-900">Anular</button>
+                                    </form>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="p-12 text-center">
+                <svg class="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599 1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <h3 class="text-lg font-medium text-gray-900 mb-1">No hay gastos registrados</h3>
+                <p class="text-gray-500 mb-4">Comienza registrando tu primer gasto.</p>
+                {% if perms.compras.add_gasto %}
+                <a href="{% url 'gasto_create' %}" class="bg-primary-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-700 transition-colors inline-flex items-center">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                    </svg>
+                    Crear el primero
+                </a>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
