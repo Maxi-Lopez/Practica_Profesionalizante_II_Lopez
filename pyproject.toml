@@ -19,6 +19,8 @@ dependencies = [
     "pillow>=13.0.0",
     "django-storages[s3]>=1.14.6",
     "boto3>=1.43.127",
+    "dj-database-url>=2.3.0",
+    "whitenoise>=6.6.0",
 ]
 
 [project.scripts]
@@ -37,8 +39,8 @@ dev = [
 ]
 
 [tool.pytest.ini_options]
-DJANGO_SETTINGS_MODULE = "config.settings"
-python_files = ["tests.py", "test_*.py", "*_tests.py"]
+DJANGO_SETTINGS_MODULE = "config.settings.testing"
+python_files = ["test_*.py", "*_tests.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 testpaths = ["."]
