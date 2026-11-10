@@ -1,15 +1,16 @@
-from django.views.generic import TemplateView, CreateView, UpdateView, DeleteView, ListView
+from django.views.generic import TemplateView, CreateView, UpdateView, DeleteView, ListView, DetailView
 from django.contrib.auth.views import LoginView, LogoutView
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.shortcuts import render, redirect
 from django.contrib.auth import login
 from django.contrib import messages
 from django.urls import reverse_lazy
+from django.utils import timezone
 
 from usuarios.models import Usuario
 from usuarios.forms import CustomUserCreationForm
 from core.forms import PacienteForm, EmpleadoForm, DocumentoForm, SalaForm, AreaInterdisciplinariaForm, DiagnosticoAreaForm, SeguimientoTrimestralForm, ProveedorForm, TipoGastoForm, CompraForm, GastoForm, PlanTratamientoForm, ObjetivoTratamientoForm, ActividadPlanForm, HistorialMedicoForm, EvolucionSemanalForm, RegistroActividadForm, NotaImportanteForm
-from pacientes.models import Sala, AreaInterdisciplinaria, DiagnosticoArea, SeguimientoTrimestral
+from pacientes.models import Sala, AreaInterdisciplinaria, DiagnosticoArea, SeguimientoTrimestral, Paciente
 from compras.models import Proveedor, Compra, TipoGasto, Gasto
 from tratamientos.models import PlanTratamiento, ObjetivoTratamiento, ActividadPlan, HistorialMedico, EvolucionSemanal, RegistroActividad, NotaImportante
 
@@ -72,6 +73,77 @@ class RegisterView(TemplateView):
         context = self.get_context_data(**kwargs)
         context['form'] = form
         return render(request, self.template_name, context)
+
+
+# ============================================================
+# PACIENTE DETAIL & LEGAJO PRINT
+# ============================================================
+
+class PacienteDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
+    model = Paciente
+    template_name = 'pacientes/detail.html'
+    context_object_name = 'paciente'
+    login_url = 'login'
+    permission_required = 'pacientes.view_paciente'
+    pk_url_kwarg = 'pk'
+
+    def get_permission_required(self):
+        if self.request.user.is_superuser:
+            return ()
+        return ('pacientes.view_paciente',)
+
+    def get_queryset(self):
+        return Paciente.objects.filter(activo=True).select_related(
+            'persona', 'obra_social', 'sala', 'sala__orientador__persona'
+        )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['perms'] = self.request.user.get_all_permissions()
+        return context
+
+
+class PacienteLegajoPrintView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
+    model = Paciente
+    template_name = 'pacientes/legajo_print.html'
+    context_object_name = 'paciente'
+    login_url = 'login'
+    permission_required = 'pacientes.view_paciente'
+    pk_url_kwarg = 'pk'
+
+    def get_permission_required(self):
+        if self.request.user.is_superuser:
+            return ()
+        return ('pacientes.view_paciente',)
+
+    def get_queryset(self):
+        return Paciente.objects.filter(activo=True).select_related(
+            'persona', 'obra_social', 'sala', 'sala__orientador__persona'
+        ).prefetch_related(
+            'persona__telefonos',
+            'persona__emails',
+            'diagnosticos_area__area',
+            'diagnosticos_area__profesional__persona',
+            'seguimientos_trimestrales__area',
+            'seguimientos_trimestrales__profesional__persona',
+            'persona__documentos'
+        )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        paciente = self.object
+        context['telefonos'] = paciente.persona.telefonos.filter(activo=True)
+        context['emails'] = paciente.persona.emails.filter(activo=True)
+        context['diagnosticos'] = paciente.diagnosticos_area.filter(activo=True).select_related(
+            'area', 'profesional__persona'
+        ).order_by('-fecha')
+        context['seguimientos'] = paciente.seguimientos_trimestrales.filter(activo=True).select_related(
+            'area', 'profesional__persona'
+        ).order_by('-fecha')
+        context['documentos'] = paciente.persona.documentos.filter(activo=True).order_by('-fecha_documento')
+        context['fecha_impresion'] = timezone.now()
+        context['usuario_impresion'] = self.request.user.get_full_name() or self.request.user.username
+        return context
 
 
 # Vistas de listado (solo lectura, con permisos)

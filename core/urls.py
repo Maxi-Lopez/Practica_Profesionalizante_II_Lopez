@@ -8,6 +8,8 @@ from .views import (
     PacienteCreateView,
     PacienteUpdateView,
     PacienteDeleteView,
+    PacienteDetailView,
+    PacienteLegajoPrintView,
     TurnosListView,
     TratamientosListView,
     EmpleadosListView,
@@ -93,6 +95,8 @@ urlpatterns = [
     # Pacientes CRUD
     path('pacientes/', PacientesListView.as_view(), name='pacientes_list'),
     path('pacientes/crear/', PacienteCreateView.as_view(), name='paciente_create'),
+    path('pacientes/<int:pk>/', PacienteDetailView.as_view(), name='paciente_detail'),
+    path('pacientes/<int:pk>/legajo/imprimir/', PacienteLegajoPrintView.as_view(), name='paciente_legajo_print'),
     path('pacientes/editar/<int:pk>/', PacienteUpdateView.as_view(), name='paciente_update'),
     path('pacientes/eliminar/<int:pk>/', PacienteDeleteView.as_view(), name='paciente_delete'),
     
