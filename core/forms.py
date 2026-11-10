@@ -6,6 +6,8 @@ from pacientes.models import (
 from empleados.models import Empleado, Rol
 from documentos.models import Documento
 from personas.models import Persona, Localidad
+from compras.models import Proveedor, Compra, DetalleCompra, TipoGasto, Gasto
+from inventario.models import Producto
 
 
 class PacienteForm(forms.ModelForm):
@@ -701,3 +703,181 @@ class DocumentoForm(forms.ModelForm):
             self.add_error('fecha_vencimiento', "La fecha de vencimiento debe ser posterior a la fecha del documento.")
         
         return cleaned_data
+
+
+class ProveedorForm(forms.ModelForm):
+    razon_social = forms.CharField(
+        max_length=150,
+        label="Razón Social",
+        widget=forms.TextInput(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'})
+    )
+    cuit = forms.CharField(
+        max_length=20,
+        label="CUIT",
+        widget=forms.TextInput(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'})
+    )
+    telefono = forms.CharField(
+        max_length=50,
+        required=False,
+        label="Teléfono",
+        widget=forms.TextInput(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'})
+    )
+    email = forms.EmailField(
+        required=False,
+        label="Email",
+        widget=forms.EmailInput(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'})
+    )
+    direccion = forms.CharField(
+        max_length=255,
+        required=False,
+        label="Dirección",
+        widget=forms.TextInput(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'})
+    )
+
+    class Meta:
+        model = Proveedor
+        fields = ['razon_social', 'cuit', 'telefono', 'email', 'direccion']
+
+    def clean_cuit(self):
+        cuit = self.cleaned_data.get('cuit', '').strip()
+        if not cuit:
+            raise forms.ValidationError("El CUIT es obligatorio.")
+        if not cuit.isdigit():
+            raise forms.ValidationError("El CUIT debe contener solo números.")
+        if len(cuit) != 11:
+            raise forms.ValidationError("El CUIT debe tener 11 dígitos.")
+        
+        qs = Proveedor.objects.filter(cuit=cuit)
+        if self.instance and self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise forms.ValidationError("Ya existe un proveedor con este CUIT.")
+        return cuit
+
+    def clean_email(self):
+        email = self.cleaned_data.get('email', '').strip()
+        if email and '@' not in email:
+            raise forms.ValidationError("El email no es válido.")
+        return email
+
+
+class TipoGastoForm(forms.ModelForm):
+    nombre = forms.CharField(
+        max_length=100,
+        label="Nombre",
+        widget=forms.TextInput(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'})
+    )
+    descripcion = forms.CharField(
+        max_length=255,
+        required=False,
+        label="Descripción",
+        widget=forms.Textarea(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors', 'rows': 3})
+    )
+
+    class Meta:
+        model = TipoGasto
+        fields = ['nombre', 'descripcion']
+
+    def clean_nombre(self):
+        nombre = self.cleaned_data.get('nombre', '').strip()
+        if not nombre:
+            raise forms.ValidationError("El nombre es obligatorio.")
+        
+        qs = TipoGasto.objects.filter(nombre__iexact=nombre)
+        if self.instance and self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise forms.ValidationError("Ya existe un tipo de gasto con este nombre.")
+        return nombre
+
+
+class CompraForm(forms.ModelForm):
+    proveedor = forms.ModelChoiceField(
+        queryset=Proveedor.objects.filter(activo=True).order_by('razon_social'),
+        label="Proveedor",
+        empty_label="Seleccionar proveedor",
+        widget=forms.Select(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'})
+    )
+    numero_comprobante = forms.CharField(
+        max_length=100,
+        required=False,
+        label="Número de Comprobante",
+        widget=forms.TextInput(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'})
+    )
+    observaciones = forms.CharField(
+        required=False,
+        label="Observaciones",
+        widget=forms.Textarea(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors', 'rows': 3})
+    )
+
+    class Meta:
+        model = Compra
+        fields = ['proveedor', 'numero_comprobante', 'observaciones']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['proveedor'].queryset = Proveedor.objects.filter(activo=True).order_by('razon_social')
+
+
+class GastoForm(forms.ModelForm):
+    tipo_gasto = forms.ModelChoiceField(
+        queryset=TipoGasto.objects.filter(activo=True).order_by('nombre'),
+        label="Tipo de Gasto",
+        empty_label="Seleccionar tipo de gasto",
+        widget=forms.Select(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'})
+    )
+    proveedor = forms.ModelChoiceField(
+        queryset=Proveedor.objects.filter(activo=True).order_by('razon_social'),
+        required=False,
+        label="Proveedor",
+        empty_label="Seleccionar proveedor (opcional)",
+        widget=forms.Select(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'})
+    )
+    fecha = forms.DateField(
+        label="Fecha",
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'})
+    )
+    concepto = forms.CharField(
+        max_length=255,
+        label="Concepto",
+        widget=forms.TextInput(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'})
+    )
+    monto = forms.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        label="Monto",
+        widget=forms.NumberInput(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors', 'step': '0.01', 'min': '0.01'})
+    )
+    numero_comprobante = forms.CharField(
+        max_length=100,
+        required=False,
+        label="Número de Comprobante",
+        widget=forms.TextInput(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'})
+    )
+    observaciones = forms.CharField(
+        required=False,
+        label="Observaciones",
+        widget=forms.Textarea(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors', 'rows': 3})
+    )
+
+    class Meta:
+        model = Gasto
+        fields = ['tipo_gasto', 'proveedor', 'fecha', 'concepto', 'monto', 'numero_comprobante', 'observaciones']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['tipo_gasto'].queryset = TipoGasto.objects.filter(activo=True).order_by('nombre')
+        self.fields['proveedor'].queryset = Proveedor.objects.filter(activo=True).order_by('razon_social')
+
+    def clean_monto(self):
+        monto = self.cleaned_data.get('monto')
+        if monto is not None and monto <= 0:
+            raise forms.ValidationError("El monto debe ser mayor a cero.")
+        return monto
+
+    def clean_fecha(self):
+        from django.utils import timezone
+        fecha = self.cleaned_data.get('fecha')
+        if fecha and fecha > timezone.now().date():
+            raise forms.ValidationError("La fecha no puede ser futura.")
+        return fecha
