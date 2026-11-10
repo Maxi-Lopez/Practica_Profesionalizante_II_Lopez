@@ -1,5 +1,3 @@
-# Ingenieria-TP-Final-Lopez
-
 # Centro de Día Proyectar - API
 
 API REST para la gestión integral del Centro de Día Proyectar.
@@ -12,6 +10,7 @@ API REST para la gestión integral del Centro de Día Proyectar.
 - **Documentación**: drf-spectacular (OpenAPI/Swagger)
 - **Tests**: pytest + model-bakery
 - **Storage**: Supabase Storage (S3 compatible) para producción / FileSystem (local)
+- **Contenedores**: Docker + Gunicorn + WhiteNoise
 
 ## Configuración de Entorno
 
@@ -24,20 +23,17 @@ cp .env.example .env
 
 | Variable | Descripción | Default |
 |----------|-------------|---------|
-| `USE_SQLITE` | Usar SQLite en lugar de PostgreSQL | `True` (dev) |
 | `SECRET_KEY` | Clave secreta de Django | (requerida) |
 | `DEBUG` | Modo debug | `True` (dev) |
 | `ALLOWED_HOSTS` | Hosts permitidos | `localhost,127.0.0.1` |
+| `CSRF_TRUSTED_ORIGINS` | Orígenes CSRF confiables | `http://localhost:8000` |
+| `DATABASE_URL` | URL de PostgreSQL (vacío = SQLite) | `` |
+| `DJANGO_SETTINGS_MODULE` | Módulo de settings | `config.settings.development` |
 
 ### Base de Datos (PostgreSQL)
 
 ```env
-USE_SQLITE=False
-DB_NAME=centro_salud_db
-DB_USER=centro_salud_user
-DB_PASSWORD=tu_password_seguro
-DB_HOST=localhost
-DB_PORT=5432
+DATABASE_URL=postgresql://user:password@host:port/dbname
 ```
 
 ### JWT
@@ -91,21 +87,6 @@ SUPABASE_S3_REGION=us-east-1
 
 **Nota**: En local (`USE_SUPABASE_STORAGE=False`), los archivos se guardan en `MEDIA_ROOT` (`./media/`). No se requieren credenciales de Supabase.
 
-### Despliegue en Render
-
-En Render Dashboard → **Environment Variables**, agregar las 5 variables de Supabase Storage:
-
-```
-USE_SUPABASE_STORAGE=True
-SUPABASE_S3_ACCESS_KEY=xxx
-SUPABASE_S3_SECRET_KEY=xxx
-SUPABASE_S3_BUCKET=documentos
-SUPABASE_S3_ENDPOINT=https://xxx.supabase.co/storage/v1/s3
-SUPABASE_S3_REGION=us-east-1
-```
-
-WhiteNoise sirve archivos estáticos; los media los sirve Supabase Storage.
-
 ## Instalación Local
 
 ```bash
@@ -128,6 +109,45 @@ uv run python manage.py createsuperuser
 uv run python manage.py runserver
 ```
 
+### Con Docker (desarrollo)
+
+```bash
+# Construir y levantar
+docker compose up --build
+
+# El servidor estará en http://localhost:8000
+```
+
+## Deploy en Render
+
+### Variables de entorno requeridas en Render Dashboard
+
+```
+SECRET_KEY=<generar-con-get_random_secret_key>
+DEBUG=False
+ALLOWED_HOSTS=tu-app.onrender.com
+CSRF_TRUSTED_ORIGINS=https://tu-app.onrender.com
+DATABASE_URL=<postgresql-url-de-supabase-o-render>
+DJANGO_SETTINGS_MODULE=config.settings.production
+
+# Supabase Storage
+USE_SUPABASE_STORAGE=True
+SUPABASE_S3_ACCESS_KEY=xxx
+SUPABASE_S3_SECRET_KEY=xxx
+SUPABASE_S3_BUCKET=documentos
+SUPABASE_S3_ENDPOINT=https://xxx.supabase.co/storage/v1/s3
+SUPABASE_S3_REGION=us-east-1
+```
+
+### Comportamiento del Dockerfile en Render
+
+El `Dockerfile` ejecuta automáticamente al arrancar:
+1. `collectstatic --no-input` - recolecta archivos estáticos con WhiteNoise
+2. `migrate` - aplica migraciones de base de datos
+3. `gunicorn` - sirve la aplicación con 3 workers
+
+WhiteNoise sirve archivos estáticos; los media los sirve Supabase Storage.
+
 ## Tests
 
 ```bash
@@ -144,7 +164,7 @@ uv run pytest documentos/tests/test_storage.py -v
 ## Estructura del Proyecto
 
 ```
-config/          # Settings, URLs, WSGI
+config/          # Settings, URLs, WSGI/ASGI
 core/            # App principal (views, forms, urls)
 usuarios/        # Auth, User model
 personas/        # Persona, Localidad, etc.
