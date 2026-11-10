@@ -19,6 +19,9 @@ from .views import (
     InventarioListView,
     ComprasListView,
     DocumentosListView,
+    DocumentoCreateView,
+    DocumentoUpdateView,
+    DocumentoDeleteView,
     SalasListView,
     SalaCreateView,
     SalaUpdateView,
@@ -78,6 +81,12 @@ urlpatterns = [
     path('seguimientos/crear/', SeguimientoCreateView.as_view(), name='seguimiento_create'),
     path('seguimientos/editar/<int:pk>/', SeguimientoUpdateView.as_view(), name='seguimiento_update'),
     path('seguimientos/eliminar/<int:pk>/', SeguimientoDeleteView.as_view(), name='seguimiento_delete'),
+    
+    # Documentos CRUD
+    path('documentos/', DocumentosListView.as_view(), name='documentos_list'),
+    path('documentos/crear/', DocumentoCreateView.as_view(), name='documento_create'),
+    path('documentos/editar/<int:pk>/', DocumentoUpdateView.as_view(), name='documento_update'),
+    path('documentos/eliminar/<int:pk>/', DocumentoDeleteView.as_view(), name='documento_delete'),
     
     # Listados (requieren login)
     path('turnos/', TurnosListView.as_view(), name='turnos_list'),
