@@ -5,6 +5,20 @@ from usuarios.models import RolUsuario
 
 Usuario = get_user_model()
 
+# Roles que requieren área (profesionales de salud)
+ROLES_PROFESIONALES = {
+    RolUsuario.PSICOLOGO,
+    RolUsuario.MEDICO,
+    RolUsuario.TRABAJADOR_SOCIAL,
+    RolUsuario.KINESIOLOGO,
+    RolUsuario.PSICOMOTRICISTA,
+    RolUsuario.NUTRICIONISTA,
+    RolUsuario.PSICOPEDAGOGO,
+    RolUsuario.PEDAGOGO,
+    RolUsuario.ENFERMERO,
+    RolUsuario.ORIENTADOR,
+}
+
 
 class UsuarioAdminForm(forms.ModelForm):
     password1 = forms.CharField(
@@ -72,6 +86,22 @@ class UsuarioAdminForm(forms.ModelForm):
         if password1 and len(password1) < 8:
             raise forms.ValidationError("La contraseña debe tener al menos 8 caracteres.")
         return password2
+
+    def clean(self):
+        cleaned_data = super().clean()
+        rol = cleaned_data.get('rol')
+        area = cleaned_data.get('area')
+
+        # Validar que los roles profesionales tengan área asignada
+        if rol in ROLES_PROFESIONALES and not area:
+            self.add_error('area', "Este rol profesional requiere un área asignada.")
+
+        # Validar que roles administrativos no tengan área (opcional: limpiar el campo)
+        if rol in {RolUsuario.ADMIN, RolUsuario.RECEPCIONISTA} and area:
+            # Podríamos limpiarlo o solo avisar; lo dejamos opcional
+            pass
+
+        return cleaned_data
 
     def save(self, commit=True):
         user = super().save(commit=False)
