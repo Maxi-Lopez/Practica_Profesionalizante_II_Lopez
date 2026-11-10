@@ -65,17 +65,6 @@ class RegisterView(TemplateView):
             paciente_group, _ = Group.objects.get_or_create(name='Paciente')
             user.groups.add(paciente_group)
             
-            # Crear Persona asociada si no existe
-            from personas.models import Persona
-            Persona.objects.get_or_create(
-                dni=user.dni,
-                defaults={
-                    'nombre': user.first_name,
-                    'apellido': user.last_name,
-                    'activo': True,
-                }
-            )
-            
             login(request, user)
             messages.success(request, '¡Cuenta creada exitosamente! Bienvenido a Centro de Día Proyectar.')
             return redirect('home')
