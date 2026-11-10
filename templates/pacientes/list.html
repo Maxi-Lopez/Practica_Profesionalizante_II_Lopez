@@ -74,6 +74,9 @@
                                     {% endif %}
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                    {% if perms.pacientes.view_paciente %}
+                                    <a href="{% url 'paciente_detail' paciente.pk %}" class="text-primary-600 hover:text-primary-900 mr-3">Ver</a>
+                                    {% endif %}
                                     <a href="{% url 'paciente_update' paciente.pk %}" class="text-primary-600 hover:text-primary-900 mr-3">Editar</a>
                                     <form action="{% url 'paciente_delete' paciente.pk %}" method="post" class="inline" onsubmit="return confirm('¿Está seguro de que desea dar de baja a este concurrente?');">
                                         {% csrf_token %}
