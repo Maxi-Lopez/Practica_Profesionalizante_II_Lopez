@@ -17,6 +17,8 @@ dependencies = [
     "django-filter>=23.5",
     "drf-spectacular>=0.27",
     "pillow>=13.0.0",
+    "django-storages[s3]>=1.14.6",
+    "boto3>=1.43.127",
 ]
 
 [project.scripts]

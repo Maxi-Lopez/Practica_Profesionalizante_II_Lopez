@@ -154,6 +154,30 @@ STATIC_URL = 'static/'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+# Supabase Storage (solo produccion)
+USE_SUPABASE_STORAGE = os.environ.get('USE_SUPABASE_STORAGE', 'False') == 'True'
+
+if USE_SUPABASE_STORAGE:
+    STORAGES = {
+        "default": {
+            "BACKEND": "storages.backends.s3.S3Storage",
+            "OPTIONS": {
+                "access_key": os.environ.get('SUPABASE_S3_ACCESS_KEY'),
+                "secret_key": os.environ.get('SUPABASE_S3_SECRET_KEY'),
+                "bucket_name": os.environ.get('SUPABASE_S3_BUCKET'),
+                "endpoint_url": os.environ.get('SUPABASE_S3_ENDPOINT'),
+                "region_name": os.environ.get('SUPABASE_S3_REGION', 'us-east-1'),
+                "file_overwrite": False,
+                "default_acl": None,
+                "querystring_auth": True,
+                "querystring_expire": 3600,
+            },
+        },
+        "staticfiles": {
+            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        },
+    }
+
 
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
