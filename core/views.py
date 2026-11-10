@@ -8,9 +8,10 @@ from django.urls import reverse_lazy
 
 from usuarios.models import Usuario
 from usuarios.forms import CustomUserCreationForm
-from core.forms import PacienteForm, EmpleadoForm, DocumentoForm, SalaForm, AreaInterdisciplinariaForm, DiagnosticoAreaForm, SeguimientoTrimestralForm, ProveedorForm, TipoGastoForm, CompraForm, GastoForm
+from core.forms import PacienteForm, EmpleadoForm, DocumentoForm, SalaForm, AreaInterdisciplinariaForm, DiagnosticoAreaForm, SeguimientoTrimestralForm, ProveedorForm, TipoGastoForm, CompraForm, GastoForm, PlanTratamientoForm, ObjetivoTratamientoForm, ActividadPlanForm, HistorialMedicoForm, EvolucionSemanalForm, RegistroActividadForm, NotaImportanteForm
 from pacientes.models import Sala, AreaInterdisciplinaria, DiagnosticoArea, SeguimientoTrimestral
 from compras.models import Proveedor, Compra, TipoGasto, Gasto
+from tratamientos.models import PlanTratamiento, ObjetivoTratamiento, ActividadPlan, HistorialMedico, EvolucionSemanal, RegistroActividad, NotaImportante
 
 
 class HomeView(TemplateView):
@@ -1019,4 +1020,550 @@ class GastoDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
         self.object.anulado = True
         self.object.save()
         messages.success(self.request, 'Gasto anulado exitosamente.')
+        return redirect(self.success_url)
+
+
+# ============================================================
+# PLANES DE TRATAMIENTO CRUD (HTML)
+# ============================================================
+
+class PlanesListView(LoginRequiredMixin, ListView):
+    model = PlanTratamiento
+    template_name = 'planes/list.html'
+    context_object_name = 'planes'
+    paginate_by = 20
+    login_url = 'login'
+
+    def get_queryset(self):
+        return PlanTratamiento.objects.filter(activo=True).select_related('paciente__persona').order_by('-fecha_inicio')
+
+
+class PlanCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+    model = None
+    form_class = PlanTratamientoForm
+    template_name = 'planes/form.html'
+    success_url = reverse_lazy('planes_list')
+    login_url = 'login'
+    permission_required = 'tratamientos.add_plantratamiento'
+
+    def get_permission_required(self):
+        if self.request.user.is_superuser:
+            return ()
+        return ('tratamientos.add_plantratamiento',)
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Plan de tratamiento creado exitosamente.')
+        return super().form_valid(form)
+
+
+class PlanUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+    model = None
+    form_class = PlanTratamientoForm
+    template_name = 'planes/form.html'
+    success_url = reverse_lazy('planes_list')
+    login_url = 'login'
+    permission_required = 'tratamientos.change_plantratamiento'
+    pk_url_kwarg = 'pk'
+
+    def get_permission_required(self):
+        if self.request.user.is_superuser:
+            return ()
+        return ('tratamientos.change_plantratamiento',)
+
+    def get_object(self, queryset=None):
+        return PlanTratamiento.objects.select_related('paciente__persona').get(pk=self.kwargs['pk'])
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Plan de tratamiento actualizado exitosamente.')
+        return super().form_valid(form)
+
+
+class PlanDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
+    template_name = 'planes/confirm_delete.html'
+    success_url = reverse_lazy('planes_list')
+    login_url = 'login'
+    permission_required = 'tratamientos.delete_plantratamiento'
+    pk_url_kwarg = 'pk'
+
+    def get_permission_required(self):
+        if self.request.user.is_superuser:
+            return ()
+        return ('tratamientos.delete_plantratamiento',)
+
+    def get_object(self, queryset=None):
+        return PlanTratamiento.objects.select_related('paciente__persona').get(pk=self.kwargs['pk'])
+
+    def form_valid(self, form):
+        self.object = self.get_object()
+        self.object.activo = False
+        self.object.save()
+        messages.success(self.request, 'Plan de tratamiento dado de baja exitosamente.')
+        return redirect(self.success_url)
+
+
+# ============================================================
+# OBJETIVOS DE TRATAMIENTO CRUD (HTML)
+# ============================================================
+
+class ObjetivosListView(LoginRequiredMixin, ListView):
+    model = ObjetivoTratamiento
+    template_name = 'objetivos/list.html'
+    context_object_name = 'objetivos'
+    paginate_by = 20
+    login_url = 'login'
+
+    def get_queryset(self):
+        return ObjetivoTratamiento.objects.filter(activo=True).select_related('plan_tratamiento__paciente__persona').order_by('-fecha_creacion')
+
+
+class ObjetivoCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+    model = None
+    form_class = ObjetivoTratamientoForm
+    template_name = 'objetivos/form.html'
+    success_url = reverse_lazy('objetivos_list')
+    login_url = 'login'
+    permission_required = 'tratamientos.add_objetivotratamiento'
+
+    def get_permission_required(self):
+        if self.request.user.is_superuser:
+            return ()
+        return ('tratamientos.add_objetivotratamiento',)
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Objetivo de tratamiento creado exitosamente.')
+        return super().form_valid(form)
+
+
+class ObjetivoUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+    model = None
+    form_class = ObjetivoTratamientoForm
+    template_name = 'objetivos/form.html'
+    success_url = reverse_lazy('objetivos_list')
+    login_url = 'login'
+    permission_required = 'tratamientos.change_objetivotratamiento'
+    pk_url_kwarg = 'pk'
+
+    def get_permission_required(self):
+        if self.request.user.is_superuser:
+            return ()
+        return ('tratamientos.change_objetivotratamiento',)
+
+    def get_object(self, queryset=None):
+        return ObjetivoTratamiento.objects.select_related('plan_tratamiento__paciente__persona').get(pk=self.kwargs['pk'])
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Objetivo de tratamiento actualizado exitosamente.')
+        return super().form_valid(form)
+
+
+class ObjetivoDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
+    template_name = 'objetivos/confirm_delete.html'
+    success_url = reverse_lazy('objetivos_list')
+    login_url = 'login'
+    permission_required = 'tratamientos.delete_objetivotratamiento'
+    pk_url_kwarg = 'pk'
+
+    def get_permission_required(self):
+        if self.request.user.is_superuser:
+            return ()
+        return ('tratamientos.delete_objetivotratamiento',)
+
+    def get_object(self, queryset=None):
+        return ObjetivoTratamiento.objects.select_related('plan_tratamiento__paciente__persona').get(pk=self.kwargs['pk'])
+
+    def form_valid(self, form):
+        self.object = self.get_object()
+        self.object.activo = False
+        self.object.save()
+        messages.success(self.request, 'Objetivo de tratamiento dado de baja exitosamente.')
+        return redirect(self.success_url)
+
+
+# ============================================================
+# ACTIVIDADES DE PLAN CRUD (HTML)
+# ============================================================
+
+class ActividadesListView(LoginRequiredMixin, ListView):
+    model = ActividadPlan
+    template_name = 'actividades/list.html'
+    context_object_name = 'actividades'
+    paginate_by = 20
+    login_url = 'login'
+
+    def get_queryset(self):
+        return ActividadPlan.objects.filter(activo=True).select_related('plan_tratamiento__paciente__persona', 'servicio__tipo_servicio').order_by('-plan_tratamiento__fecha_inicio')
+
+
+class ActividadCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+    model = None
+    form_class = ActividadPlanForm
+    template_name = 'actividades/form.html'
+    success_url = reverse_lazy('actividades_list')
+    login_url = 'login'
+    permission_required = 'tratamientos.add_actividadplan'
+
+    def get_permission_required(self):
+        if self.request.user.is_superuser:
+            return ()
+        return ('tratamientos.add_actividadplan',)
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Actividad de plan creada exitosamente.')
+        return super().form_valid(form)
+
+
+class ActividadUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+    model = None
+    form_class = ActividadPlanForm
+    template_name = 'actividades/form.html'
+    success_url = reverse_lazy('actividades_list')
+    login_url = 'login'
+    permission_required = 'tratamientos.change_actividadplan'
+    pk_url_kwarg = 'pk'
+
+    def get_permission_required(self):
+        if self.request.user.is_superuser:
+            return ()
+        return ('tratamientos.change_actividadplan',)
+
+    def get_object(self, queryset=None):
+        return ActividadPlan.objects.select_related('plan_tratamiento__paciente__persona', 'servicio__tipo_servicio').get(pk=self.kwargs['pk'])
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Actividad de plan actualizada exitosamente.')
+        return super().form_valid(form)
+
+
+class ActividadDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
+    template_name = 'actividades/confirm_delete.html'
+    success_url = reverse_lazy('actividades_list')
+    login_url = 'login'
+    permission_required = 'tratamientos.delete_actividadplan'
+    pk_url_kwarg = 'pk'
+
+    def get_permission_required(self):
+        if self.request.user.is_superuser:
+            return ()
+        return ('tratamientos.delete_actividadplan',)
+
+    def get_object(self, queryset=None):
+        return ActividadPlan.objects.select_related('plan_tratamiento__paciente__persona', 'servicio__tipo_servicio').get(pk=self.kwargs['pk'])
+
+    def form_valid(self, form):
+        self.object = self.get_object()
+        self.object.activo = False
+        self.object.save()
+        messages.success(self.request, 'Actividad de plan dada de baja exitosamente.')
+        return redirect(self.success_url)
+
+
+# ============================================================
+# HISTORIALES MÉDICOS CRUD (HTML)
+# ============================================================
+
+class HistorialesListView(LoginRequiredMixin, ListView):
+    model = HistorialMedico
+    template_name = 'historiales/list.html'
+    context_object_name = 'historiales'
+    paginate_by = 20
+    login_url = 'login'
+
+    def get_queryset(self):
+        return HistorialMedico.objects.select_related('paciente__persona', 'profesional__persona').order_by('-fecha')
+
+
+class HistorialCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+    model = None
+    form_class = HistorialMedicoForm
+    template_name = 'historiales/form.html'
+    success_url = reverse_lazy('historiales_list')
+    login_url = 'login'
+    permission_required = 'tratamientos.add_historialmedico'
+
+    def get_permission_required(self):
+        if self.request.user.is_superuser:
+            return ()
+        return ('tratamientos.add_historialmedico',)
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Historial médico creado exitosamente.')
+        return super().form_valid(form)
+
+
+class HistorialUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+    model = None
+    form_class = HistorialMedicoForm
+    template_name = 'historiales/form.html'
+    success_url = reverse_lazy('historiales_list')
+    login_url = 'login'
+    permission_required = 'tratamientos.change_historialmedico'
+    pk_url_kwarg = 'pk'
+
+    def get_permission_required(self):
+        if self.request.user.is_superuser:
+            return ()
+        return ('tratamientos.change_historialmedico',)
+
+    def get_object(self, queryset=None):
+        return HistorialMedico.objects.select_related('paciente__persona', 'profesional__persona').get(pk=self.kwargs['pk'])
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Historial médico actualizado exitosamente.')
+        return super().form_valid(form)
+
+
+class HistorialDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
+    template_name = 'historiales/confirm_delete.html'
+    success_url = reverse_lazy('historiales_list')
+    login_url = 'login'
+    permission_required = 'tratamientos.delete_historialmedico'
+    pk_url_kwarg = 'pk'
+
+    def get_permission_required(self):
+        if self.request.user.is_superuser:
+            return ()
+        return ('tratamientos.delete_historialmedico',)
+
+    def get_object(self, queryset=None):
+        return HistorialMedico.objects.select_related('paciente__persona', 'profesional__persona').get(pk=self.kwargs['pk'])
+
+    def form_valid(self, form):
+        self.object = self.get_object()
+        self.object.activo = False
+        self.object.save()
+        messages.success(self.request, 'Historial médico dado de baja exitosamente.')
+        return redirect(self.success_url)
+
+
+# ============================================================
+# EVOLUCIONES SEMANALES CRUD (HTML)
+# ============================================================
+
+class EvolucionesListView(LoginRequiredMixin, ListView):
+    model = EvolucionSemanal
+    template_name = 'evoluciones/list.html'
+    context_object_name = 'evoluciones'
+    paginate_by = 20
+    login_url = 'login'
+
+    def get_queryset(self):
+        return EvolucionSemanal.objects.select_related('paciente__persona', 'plan_tratamiento__paciente__persona', 'profesional__persona').order_by('-fecha')
+
+
+class EvolucionCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+    model = None
+    form_class = EvolucionSemanalForm
+    template_name = 'evoluciones/form.html'
+    success_url = reverse_lazy('evoluciones_list')
+    login_url = 'login'
+    permission_required = 'tratamientos.add_evolucionsemanal'
+
+    def get_permission_required(self):
+        if self.request.user.is_superuser:
+            return ()
+        return ('tratamientos.add_evolucionsemanal',)
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Evolución semanal creada exitosamente.')
+        return super().form_valid(form)
+
+
+class EvolucionUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+    model = None
+    form_class = EvolucionSemanalForm
+    template_name = 'evoluciones/form.html'
+    success_url = reverse_lazy('evoluciones_list')
+    login_url = 'login'
+    permission_required = 'tratamientos.change_evolucionsemanal'
+    pk_url_kwarg = 'pk'
+
+    def get_permission_required(self):
+        if self.request.user.is_superuser:
+            return ()
+        return ('tratamientos.change_evolucionsemanal',)
+
+    def get_object(self, queryset=None):
+        return EvolucionSemanal.objects.select_related('paciente__persona', 'plan_tratamiento__paciente__persona', 'profesional__persona').get(pk=self.kwargs['pk'])
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Evolución semanal actualizada exitosamente.')
+        return super().form_valid(form)
+
+
+class EvolucionDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
+    template_name = 'evoluciones/confirm_delete.html'
+    success_url = reverse_lazy('evoluciones_list')
+    login_url = 'login'
+    permission_required = 'tratamientos.delete_evolucionsemanal'
+    pk_url_kwarg = 'pk'
+
+    def get_permission_required(self):
+        if self.request.user.is_superuser:
+            return ()
+        return ('tratamientos.delete_evolucionsemanal',)
+
+    def get_object(self, queryset=None):
+        return EvolucionSemanal.objects.select_related('paciente__persona', 'plan_tratamiento__paciente__persona', 'profesional__persona').get(pk=self.kwargs['pk'])
+
+    def form_valid(self, form):
+        self.object = self.get_object()
+        self.object.activo = False
+        self.object.save()
+        messages.success(self.request, 'Evolución semanal dada de baja exitosamente.')
+        return redirect(self.success_url)
+
+
+# ============================================================
+# REGISTROS DE ACTIVIDAD CRUD (HTML)
+# ============================================================
+
+class RegistrosListView(LoginRequiredMixin, ListView):
+    model = RegistroActividad
+    template_name = 'registros/list.html'
+    context_object_name = 'registros'
+    paginate_by = 20
+    login_url = 'login'
+
+    def get_queryset(self):
+        return RegistroActividad.objects.select_related('paciente__persona', 'actividad__plan_tratamiento__paciente__persona', 'actividad__servicio__tipo_servicio', 'profesional__persona').order_by('-fecha')
+
+
+class RegistroCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+    model = None
+    form_class = RegistroActividadForm
+    template_name = 'registros/form.html'
+    success_url = reverse_lazy('registros_list')
+    login_url = 'login'
+    permission_required = 'tratamientos.add_registroactividad'
+
+    def get_permission_required(self):
+        if self.request.user.is_superuser:
+            return ()
+        return ('tratamientos.add_registroactividad',)
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Registro de actividad creado exitosamente.')
+        return super().form_valid(form)
+
+
+class RegistroUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+    model = None
+    form_class = RegistroActividadForm
+    template_name = 'registros/form.html'
+    success_url = reverse_lazy('registros_list')
+    login_url = 'login'
+    permission_required = 'tratamientos.change_registroactividad'
+    pk_url_kwarg = 'pk'
+
+    def get_permission_required(self):
+        if self.request.user.is_superuser:
+            return ()
+        return ('tratamientos.change_registroactividad',)
+
+    def get_object(self, queryset=None):
+        return RegistroActividad.objects.select_related('paciente__persona', 'actividad__plan_tratamiento__paciente__persona', 'actividad__servicio__tipo_servicio', 'profesional__persona').get(pk=self.kwargs['pk'])
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Registro de actividad actualizado exitosamente.')
+        return super().form_valid(form)
+
+
+class RegistroDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
+    template_name = 'registros/confirm_delete.html'
+    success_url = reverse_lazy('registros_list')
+    login_url = 'login'
+    permission_required = 'tratamientos.delete_registroactividad'
+    pk_url_kwarg = 'pk'
+
+    def get_permission_required(self):
+        if self.request.user.is_superuser:
+            return ()
+        return ('tratamientos.delete_registroactividad',)
+
+    def get_object(self, queryset=None):
+        return RegistroActividad.objects.select_related('paciente__persona', 'actividad__plan_tratamiento__paciente__persona', 'actividad__servicio__tipo_servicio', 'profesional__persona').get(pk=self.kwargs['pk'])
+
+    def form_valid(self, form):
+        self.object = self.get_object()
+        self.object.activo = False
+        self.object.save()
+        messages.success(self.request, 'Registro de actividad dado de baja exitosamente.')
+        return redirect(self.success_url)
+
+
+# ============================================================
+# NOTAS IMPORTANTES CRUD (HTML)
+# ============================================================
+
+class NotasListView(LoginRequiredMixin, ListView):
+    model = NotaImportante
+    template_name = 'notas/list.html'
+    context_object_name = 'notas'
+    paginate_by = 20
+    login_url = 'login'
+
+    def get_queryset(self):
+        return NotaImportante.objects.select_related('paciente__persona', 'profesional__persona').order_by('-fecha')
+
+
+class NotaCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+    model = None
+    form_class = NotaImportanteForm
+    template_name = 'notas/form.html'
+    success_url = reverse_lazy('notas_list')
+    login_url = 'login'
+    permission_required = 'tratamientos.add_notaimportante'
+
+    def get_permission_required(self):
+        if self.request.user.is_superuser:
+            return ()
+        return ('tratamientos.add_notaimportante',)
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Nota importante creada exitosamente.')
+        return super().form_valid(form)
+
+
+class NotaUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+    model = None
+    form_class = NotaImportanteForm
+    template_name = 'notas/form.html'
+    success_url = reverse_lazy('notas_list')
+    login_url = 'login'
+    permission_required = 'tratamientos.change_notaimportante'
+    pk_url_kwarg = 'pk'
+
+    def get_permission_required(self):
+        if self.request.user.is_superuser:
+            return ()
+        return ('tratamientos.change_notaimportante',)
+
+    def get_object(self, queryset=None):
+        return NotaImportante.objects.select_related('paciente__persona', 'profesional__persona').get(pk=self.kwargs['pk'])
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Nota importante actualizada exitosamente.')
+        return super().form_valid(form)
+
+
+class NotaDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
+    template_name = 'notas/confirm_delete.html'
+    success_url = reverse_lazy('notas_list')
+    login_url = 'login'
+    permission_required = 'tratamientos.delete_notaimportante'
+    pk_url_kwarg = 'pk'
+
+    def get_permission_required(self):
+        if self.request.user.is_superuser:
+            return ()
+        return ('tratamientos.delete_notaimportante',)
+
+    def get_object(self, queryset=None):
+        return NotaImportante.objects.select_related('paciente__persona', 'profesional__persona').get(pk=self.kwargs['pk'])
+
+    def form_valid(self, form):
+        self.object = self.get_object()
+        self.object.activo = False
+        self.object.save()
+        messages.success(self.request, 'Nota importante dada de baja exitosamente.')
         return redirect(self.success_url)
