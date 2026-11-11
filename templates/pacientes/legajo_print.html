@@ -365,14 +365,10 @@
                     <div class="field-label">Fecha de vencimiento</div>
                     <div class="field-value">
                         {{ paciente.fecha_vencimiento_cud|date:"d/m/Y"|default:"—" }}
-                        {% if paciente.fecha_vencimiento_cud %}
-                            {% with hoy=now|date:"Y-m-d" %}
-                            {% if paciente.fecha_vencimiento_cud|date:"Y-m-d" <= hoy %}
-                                <span class="badge badge-danger"> VENCIDO</span>
-                            {% elif paciente.aviso_vencimiento_cud %}
-                                <span class="badge badge-warning"> PRÓXIMO A VENCER</span>
-                            {% endif %}
-                            {% endwith %}
+                        {% if cud_vencido %}
+                            <span class="badge badge-danger"> VENCIDO</span>
+                        {% elif cud_proximo_a_vencer %}
+                            <span class="badge badge-warning"> PRÓXIMO A VENCER</span>
                         {% endif %}
                     </div>
                 </div>
@@ -427,14 +423,10 @@
                     <div class="field-label">Fecha de vencimiento</div>
                     <div class="field-value">
                         {{ paciente.pases_transporte_vencimiento|date:"d/m/Y"|default:"—" }}
-                        {% if paciente.pases_transporte_vencimiento %}
-                            {% with hoy=now|date:"Y-m-d" %}
-                            {% if paciente.pases_transporte_vencimiento|date:"Y-m-d" <= hoy %}
-                                <span class="badge badge-danger"> VENCIDO</span>
-                            {% elif paciente.pases_transporte_vencimiento|date:"Y-m-d" <= hoy|add_days:30 %}
-                                <span class="badge badge-warning"> PRÓXIMO A VENCER</span>
-                            {% endif %}
-                            {% endwith %}
+                        {% if pases_vencidos %}
+                            <span class="badge badge-danger"> VENCIDO</span>
+                        {% elif pases_proximos_a_vencer %}
+                            <span class="badge badge-warning"> PRÓXIMO A VENCER</span>
                         {% endif %}
                     </div>
                 </div>
