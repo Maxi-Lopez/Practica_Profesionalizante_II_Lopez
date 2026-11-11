@@ -6,6 +6,7 @@ from django.contrib.auth import login
 from django.contrib import messages
 from django.urls import reverse_lazy
 from django.utils import timezone
+from datetime import timedelta
 from django.core.exceptions import PermissionDenied
 
 from usuarios.models import Usuario
@@ -85,6 +86,32 @@ class PacienteDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['perms'] = self.request.user.get_all_permissions()
+        
+        paciente = self.object
+        hoy = timezone.now().date()
+        
+        # Flags para CUD
+        if paciente.fecha_vencimiento_cud:
+            context['cud_vencido'] = paciente.fecha_vencimiento_cud <= hoy
+            context['cud_proximo_a_vencer'] = (
+                not context['cud_vencido'] and 
+                paciente.fecha_vencimiento_cud <= hoy + timedelta(days=30)
+            )
+        else:
+            context['cud_vencido'] = False
+            context['cud_proximo_a_vencer'] = False
+        
+        # Flags para Pases de Transporte
+        if paciente.pases_transporte_vencimiento:
+            context['pases_vencidos'] = paciente.pases_transporte_vencimiento <= hoy
+            context['pases_proximos_a_vencer'] = (
+                not context['pases_vencidos'] and 
+                paciente.pases_transporte_vencimiento <= hoy + timedelta(days=30)
+            )
+        else:
+            context['pases_vencidos'] = False
+            context['pases_proximos_a_vencer'] = False
+        
         return context
 
 
@@ -128,6 +155,30 @@ class PacienteLegajoPrintView(LoginRequiredMixin, PermissionRequiredMixin, Detai
         context['documentos'] = paciente.persona.documentos.filter(activo=True).order_by('-fecha_documento')
         context['fecha_impresion'] = timezone.now()
         context['usuario_impresion'] = self.request.user.get_full_name() or self.request.user.username
+        
+        # Flags para CUD
+        hoy = timezone.now().date()
+        if paciente.fecha_vencimiento_cud:
+            context['cud_vencido'] = paciente.fecha_vencimiento_cud <= hoy
+            context['cud_proximo_a_vencer'] = (
+                not context['cud_vencido'] and 
+                paciente.fecha_vencimiento_cud <= hoy + timedelta(days=30)
+            )
+        else:
+            context['cud_vencido'] = False
+            context['cud_proximo_a_vencer'] = False
+        
+        # Flags para Pases de Transporte
+        if paciente.pases_transporte_vencimiento:
+            context['pases_vencidos'] = paciente.pases_transporte_vencimiento <= hoy
+            context['pases_proximos_a_vencer'] = (
+                not context['pases_vencidos'] and 
+                paciente.pases_transporte_vencimiento <= hoy + timedelta(days=30)
+            )
+        else:
+            context['pases_vencidos'] = False
+            context['pases_proximos_a_vencer'] = False
+        
         return context
 
 
