@@ -62,11 +62,13 @@ class UsuarioAdminForm(forms.ModelForm):
         
         is_editing = self.instance and self.instance.pk
         if is_editing:
-            # En edición, ocultar password1/password2 y mostrar checkbox
-            self.fields.pop('password1', None)
-            self.fields.pop('password2', None)
+            # En edición: password1/password2 opcionales, mostrar checkbox
+            self.fields['password1'].required = False
+            self.fields['password2'].required = False
+            self.fields['password1'].help_text = "Deje en blanco para no cambiar la contraseña."
+            self.fields['password2'].help_text = "Deje en blanco para no cambiar la contraseña."
         else:
-            # En creación, ocultar checkbox
+            # En creación: ocultar checkbox, passwords obligatorios
             self.fields.pop('cambiar_password', None)
 
     def clean_username(self):
