@@ -449,6 +449,17 @@ class TurnosListView(LoginRequiredMixin, TemplateView):
         else:
             context['turnos'] = Turno.objects.none()
         
+        # Aplicar búsqueda si existe el parámetro
+        search = self.request.GET.get('search', '').strip()
+        if search:
+            search_q = Q(paciente__persona__nombre__icontains=search) | \
+                       Q(paciente__persona__apellido__icontains=search) | \
+                       Q(paciente__persona__dni__icontains=search) | \
+                       Q(profesional__persona__nombre__icontains=search) | \
+                       Q(profesional__persona__apellido__icontains=search) | \
+                       Q(servicio__nombre__icontains=search)
+            context['turnos'] = context['turnos'].filter(search_q)
+        
         # Para el modal: pacientes y servicios
         context['pacientes'] = Paciente.objects.filter(activo=True).select_related('persona').order_by('persona__apellido', 'persona__nombre')
         context['servicios'] = Servicio.objects.filter(activo=True).order_by('nombre')
