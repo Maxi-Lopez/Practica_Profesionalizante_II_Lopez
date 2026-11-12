@@ -1310,9 +1310,35 @@ class SeguimientosListView(LoginRequiredMixin, ListView):
     login_url = 'login'
 
     def get_queryset(self):
-        return SeguimientoTrimestral.objects.filter(activo=True).select_related(
+        qs = SeguimientoTrimestral.objects.filter(activo=True).select_related(
             'paciente__persona', 'area', 'profesional__persona'
         ).order_by('-fecha')
+        
+        user = self.request.user
+        if user.rol in ['psicologo', 'medico', 'trabajador_social', 'kinesiologo', 
+                        'psicomotricista', 'nutricionista', 'psicopedagogo', 'pedagogo', 'enfermero']:
+            profesional = getattr(user, 'empleado', None)
+            if profesional:
+                qs = qs.filter(profesional=profesional)
+            elif user.area:
+                qs = qs.filter(area=user.area)
+            else:
+                qs = qs.none()
+        
+        # Aplicar filtro de búsqueda
+        search = self.request.GET.get('search', '').strip()
+        if search:
+            from django.db.models import Q
+            qs = qs.filter(
+                Q(paciente__persona__nombre__icontains=search) |
+                Q(paciente__persona__apellido__icontains=search) |
+                Q(paciente__persona__dni__icontains=search) |
+                Q(area__nombre__icontains=search) |
+                Q(profesional__persona__nombre__icontains=search) |
+                Q(profesional__persona__apellido__icontains=search)
+            )
+        
+        return qs
 
 
 class SeguimientoCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
@@ -1333,46 +1359,57 @@ class SeguimientoCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateV
         return super().form_valid(form)
 
 
-class SeguimientoUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+class SeguimientoUpdateView(LoginRequiredMixin, UpdateView):
     model = None
     form_class = SeguimientoTrimestralForm
     template_name = 'seguimientos/form.html'
     success_url = reverse_lazy('seguimientos_list')
     login_url = 'login'
-    permission_required = 'pacientes.change_seguimientotrimestral'
     pk_url_kwarg = 'pk'
 
-    def get_permission_required(self):
-        if self.request.user.is_superuser:
-            return ()
-        return ('pacientes.change_seguimientotrimestral',)
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
 
-    def get_object(self, queryset=None):
-        return SeguimientoTrimestral.objects.select_related(
+    def get_queryset(self):
+        user = self.request.user
+        qs = SeguimientoTrimestral.objects.select_related(
             'paciente__persona', 'area', 'profesional__persona'
-        ).get(pk=self.kwargs['pk'])
+        )
+        if user.is_superuser or user.rol in ['admin', 'orientador', 'recepcionista']:
+            return qs
+        profesional = getattr(user, 'empleado', None)
+        if profesional:
+            return qs.filter(profesional=profesional)
+        if hasattr(user, 'area') and user.area:
+            return qs.filter(area=user.area)
+        return qs.none()
 
     def form_valid(self, form):
         messages.success(self.request, 'Seguimiento actualizado exitosamente.')
         return super().form_valid(form)
 
 
-class SeguimientoDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
+class SeguimientoDeleteView(LoginRequiredMixin, DeleteView):
     template_name = 'seguimientos/confirm_delete.html'
     success_url = reverse_lazy('seguimientos_list')
     login_url = 'login'
-    permission_required = 'pacientes.delete_seguimientotrimestral'
     pk_url_kwarg = 'pk'
 
-    def get_permission_required(self):
-        if self.request.user.is_superuser:
-            return ()
-        return ('pacientes.delete_seguimientotrimestral',)
-
-    def get_object(self, queryset=None):
-        return SeguimientoTrimestral.objects.select_related(
+    def get_queryset(self):
+        user = self.request.user
+        qs = SeguimientoTrimestral.objects.select_related(
             'paciente__persona', 'area', 'profesional__persona'
-        ).get(pk=self.kwargs['pk'])
+        )
+        if user.is_superuser or user.rol in ['admin', 'orientador', 'recepcionista']:
+            return qs
+        profesional = getattr(user, 'empleado', None)
+        if profesional:
+            return qs.filter(profesional=profesional)
+        if hasattr(user, 'area') and user.area:
+            return qs.filter(area=user.area)
+        return qs.none()
 
     def form_valid(self, form):
         self.object = self.get_object()
