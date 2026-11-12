@@ -49,7 +49,7 @@
                     </thead>
                     <tbody class="divide-y divide-gray-200">
                         {% for documento in documentos %}
-                            <tr class="hover:bg-gray-50">
+                            <tr class="hover:bg-gray-50 cursor-pointer" onclick="window.location='{% url 'documento_update' documento.pk %}'">
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ documento.persona.nombre }} {{ documento.persona.apellido }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ documento.get_tipo_display }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ documento.nombre }}</td>
@@ -57,7 +57,7 @@
                                 <td class="px-6 py-4 whitespace-nowrap text-sm {% if documento.fecha_vencimiento and documento.fecha_vencimiento < hoy %}text-red-600 font-medium{% else %}text-gray-700{% endif %}">{{ documento.fecha_vencimiento|date:"d/m/Y"|default:"—" }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                                     {% if documento.archivo %}
-                                        <a href="{{ documento.archivo.url }}" target="_blank" class="text-primary-600 hover:text-primary-900 underline">Descargar</a>
+                                        <a href="{{ documento.archivo.url }}" target="_blank" onclick="event.stopPropagation()" class="text-primary-600 hover:text-primary-900 underline">Descargar</a>
                                     {% else %}
                                         —
                                     {% endif %}
@@ -71,10 +71,10 @@
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                     {% if perms.documentos.change_documento %}
-                                    <a href="{% url 'documento_update' documento.pk %}" class="text-primary-600 hover:text-primary-900 mr-3">Editar</a>
+                                    <a href="{% url 'documento_update' documento.pk %}" onclick="event.stopPropagation()" class="text-primary-600 hover:text-primary-900 mr-3">Editar</a>
                                     {% endif %}
                                     {% if perms.documentos.delete_documento %}
-                                    <form action="{% url 'documento_delete' documento.pk %}" method="post" class="inline" onsubmit="return confirm('¿Está seguro de que desea dar de baja a este documento?');">
+                                    <form action="{% url 'documento_delete' documento.pk %}" method="post" class="inline" onsubmit="event.stopPropagation(); return confirm('¿Está seguro de que desea dar de baja a este documento?');">
                                         {% csrf_token %}
                                         <button type="submit" class="text-red-600 hover:text-red-900">Eliminar</button>
                                     </form>

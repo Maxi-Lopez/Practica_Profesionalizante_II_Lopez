@@ -48,7 +48,7 @@
                     </thead>
                     <tbody class="divide-y divide-gray-200">
                         {% for diagnostico in diagnosticos %}
-                            <tr class="hover:bg-gray-50">
+                            <tr class="hover:bg-gray-50 cursor-pointer" onclick="window.location='{% url 'diagnostico_update' diagnostico.pk %}'">
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ diagnostico.paciente.persona.nombre }} {{ diagnostico.paciente.persona.apellido }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ diagnostico.area.get_nombre_display }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ diagnostico.fecha|date:"d/m/Y" }}</td>
@@ -69,10 +69,10 @@
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                     {% if perms.pacientes.change_diagnosticoarea %}
-                                    <a href="{% url 'diagnostico_update' diagnostico.pk %}" class="text-primary-600 hover:text-primary-900 mr-3">Editar</a>
+                                    <a href="{% url 'diagnostico_update' diagnostico.pk %}" onclick="event.stopPropagation()" class="text-primary-600 hover:text-primary-900 mr-3">Editar</a>
                                     {% endif %}
                                     {% if perms.pacientes.delete_diagnosticoarea %}
-                                    <form action="{% url 'diagnostico_delete' diagnostico.pk %}" method="post" class="inline" onsubmit="return confirm('¿Está seguro de que desea dar de baja a este diagnóstico?');">
+                                    <form action="{% url 'diagnostico_delete' diagnostico.pk %}" method="post" class="inline" onsubmit="event.stopPropagation(); return confirm('¿Está seguro de que desea dar de baja a este diagnóstico?');">
                                         {% csrf_token %}
                                         <button type="submit" class="text-red-600 hover:text-red-900">Eliminar</button>
                                     </form>

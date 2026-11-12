@@ -47,7 +47,7 @@
                     </thead>
                     <tbody class="divide-y divide-gray-200">
                         {% for objetivo in objetivos %}
-                            <tr class="hover:bg-gray-50">
+                            <tr class="hover:bg-gray-50 cursor-pointer" onclick="window.location='{% url 'objetivo_update' objetivo.pk %}'">
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ objetivo.plan_tratamiento.nombre }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ objetivo.plan_tratamiento.paciente.persona.nombre }} {{ objetivo.plan_tratamiento.paciente.persona.apellido }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-700 max-w-xs truncate">{{ objetivo.descripcion }}</td>
@@ -61,10 +61,10 @@
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ objetivo.fecha_creacion|date:"d/m/Y H:i" }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                     {% if perms.tratamientos.change_objetivotratamiento and objetivo.activo %}
-                                    <a href="{% url 'objetivo_update' objetivo.pk %}" class="text-primary-600 hover:text-primary-900 mr-3">Editar</a>
+                                    <a href="{% url 'objetivo_update' objetivo.pk %}" onclick="event.stopPropagation()" class="text-primary-600 hover:text-primary-900 mr-3">Editar</a>
                                     {% endif %}
                                     {% if perms.tratamientos.delete_objetivotratamiento and objetivo.activo %}
-                                    <form action="{% url 'objetivo_delete' objetivo.pk %}" method="post" class="inline" onsubmit="return confirm('¿Está seguro de que desea dar de baja a este objetivo?');">
+                                    <form action="{% url 'objetivo_delete' objetivo.pk %}" method="post" class="inline" onsubmit="event.stopPropagation(); return confirm('¿Está seguro de que desea dar de baja a este objetivo?');">
                                         {% csrf_token %}
                                         <button type="submit" class="text-red-600 hover:text-red-900">Eliminar</button>
                                     </form>
