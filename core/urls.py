@@ -4,6 +4,7 @@ from .views import (
     HomeView,
     CustomLoginView,
     CustomLogoutView,
+    health_check,
     PacientesListView,
     PacienteCreateView,
     PacienteUpdateView,
@@ -92,6 +93,7 @@ from .views import (
 
 urlpatterns = [
     path('', HomeView.as_view(), name='home'),
+    path('health/', health_check, name='health_check'),
     path('login/', CustomLoginView.as_view(), name='login'),
     path('logout/', CustomLogoutView.as_view(), name='logout'),
     path('register/', RedirectView.as_view(url='/login/', permanent=False), name='register'),
