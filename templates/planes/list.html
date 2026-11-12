@@ -47,7 +47,7 @@
                     </thead>
                     <tbody class="divide-y divide-gray-200">
                         {% for plan in planes %}
-                            <tr class="hover:bg-gray-50">
+                            <tr class="hover:bg-gray-50 cursor-pointer" onclick="window.location='{% url 'plan_update' plan.pk %}'">
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ plan.paciente.persona.nombre }} {{ plan.paciente.persona.apellido }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ plan.nombre }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ plan.fecha_inicio|date:"d/m/Y" }}</td>
@@ -61,10 +61,10 @@
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                     {% if perms.tratamientos.change_plantratamiento and plan.activo %}
-                                    <a href="{% url 'plan_update' plan.pk %}" class="text-primary-600 hover:text-primary-900 mr-3">Editar</a>
+                                    <a href="{% url 'plan_update' plan.pk %}" onclick="event.stopPropagation()" class="text-primary-600 hover:text-primary-900 mr-3">Editar</a>
                                     {% endif %}
                                     {% if perms.tratamientos.delete_plantratamiento and plan.activo %}
-                                    <form action="{% url 'plan_delete' plan.pk %}" method="post" class="inline" onsubmit="return confirm('¿Está seguro de que desea dar de baja a este plan de tratamiento?');">
+                                    <form action="{% url 'plan_delete' plan.pk %}" method="post" class="inline" onsubmit="event.stopPropagation(); return confirm('¿Está seguro de que desea dar de baja a este plan de tratamiento?');">
                                         {% csrf_token %}
                                         <button type="submit" class="text-red-600 hover:text-red-900">Eliminar</button>
                                     </form>

@@ -48,7 +48,7 @@
                     </thead>
                     <tbody class="divide-y divide-gray-200">
                         {% for actividad in actividades %}
-                            <tr class="hover:bg-gray-50">
+                            <tr class="hover:bg-gray-50 cursor-pointer" onclick="window.location='{% url 'actividad_update' actividad.pk %}'">
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ actividad.plan_tratamiento.nombre }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ actividad.plan_tratamiento.paciente.persona.nombre }} {{ actividad.plan_tratamiento.paciente.persona.apellido }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ actividad.servicio.nombre|default:"—" }}</td>
@@ -63,10 +63,10 @@
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                     {% if perms.tratamientos.change_actividadplan and actividad.activo %}
-                                    <a href="{% url 'actividad_update' actividad.pk %}" class="text-primary-600 hover:text-primary-900 mr-3">Editar</a>
+                                    <a href="{% url 'actividad_update' actividad.pk %}" onclick="event.stopPropagation()" class="text-primary-600 hover:text-primary-900 mr-3">Editar</a>
                                     {% endif %}
                                     {% if perms.tratamientos.delete_actividadplan and actividad.activo %}
-                                    <form action="{% url 'actividad_delete' actividad.pk %}" method="post" class="inline" onsubmit="return confirm('¿Está seguro de que desea dar de baja a esta actividad?');">
+                                    <form action="{% url 'actividad_delete' actividad.pk %}" method="post" class="inline" onsubmit="event.stopPropagation(); return confirm('¿Está seguro de que desea dar de baja a esta actividad?');">
                                         {% csrf_token %}
                                         <button type="submit" class="text-red-600 hover:text-red-900">Eliminar</button>
                                     </form>

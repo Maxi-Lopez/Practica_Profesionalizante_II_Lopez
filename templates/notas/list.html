@@ -47,7 +47,7 @@
                     </thead>
                     <tbody class="divide-y divide-gray-200">
                         {% for nota in notas %}
-                            <tr class="hover:bg-gray-50">
+                            <tr class="hover:bg-gray-50 cursor-pointer" onclick="window.location='{% url 'nota_update' nota.pk %}'">
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ nota.paciente.persona.nombre }} {{ nota.paciente.persona.apellido }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ nota.profesional.persona.nombre }} {{ nota.profesional.persona.apellido }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ nota.titulo }}</td>
@@ -55,10 +55,10 @@
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ nota.fecha|date:"d/m/Y H:i" }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                     {% if perms.tratamientos.change_notaimportante %}
-                                    <a href="{% url 'nota_update' nota.pk %}" class="text-primary-600 hover:text-primary-900 mr-3">Editar</a>
+                                    <a href="{% url 'nota_update' nota.pk %}" onclick="event.stopPropagation()" class="text-primary-600 hover:text-primary-900 mr-3">Editar</a>
                                     {% endif %}
                                     {% if perms.tratamientos.delete_notaimportante %}
-                                    <form action="{% url 'nota_delete' nota.pk %}" method="post" class="inline" onsubmit="return confirm('¿Está seguro de que desea dar de baja a esta nota importante?');">
+                                    <form action="{% url 'nota_delete' nota.pk %}" method="post" class="inline" onsubmit="event.stopPropagation(); return confirm('¿Está seguro de que desea dar de baja a esta nota importante?');">
                                         {% csrf_token %}
                                         <button type="submit" class="text-red-600 hover:text-red-900">Eliminar</button>
                                     </form>
