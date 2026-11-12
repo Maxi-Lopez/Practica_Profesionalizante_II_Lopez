@@ -180,17 +180,25 @@ class PacienteDetailView(LoginRequiredMixin, DetailView):
         raise PermissionDenied("No tiene permiso para ver pacientes.")
 
     def paciente_en_area_del_profesional(self, paciente, user):
-        """Verifica si el paciente tiene relación con el área del profesional."""
+        """Verifica si el paciente tiene relación con el profesional logueado."""
+        profesional = getattr(user, 'empleado', None)
+        if profesional:
+            # Verificar turnos con este profesional
+            if paciente.turnos.filter(profesional=profesional).exists():
+                return True
+            # Verificar diagnósticos con este profesional
+            if paciente.diagnosticos_area.filter(activo=True, profesional=profesional).exists():
+                return True
+            # Verificar seguimientos con este profesional
+            if paciente.seguimientos_trimestrales.filter(activo=True, profesional=profesional).exists():
+                return True
+        # Fallback a área si no tiene empleado vinculado
         if not user.area:
             return False
-        # Verificar diagnósticos en el área
         if paciente.diagnosticos_area.filter(activo=True, area=user.area).exists():
             return True
-        # Verificar seguimientos en el área
         if paciente.seguimientos_trimestrales.filter(activo=True, area=user.area).exists():
             return True
-        # Verificar turnos con profesional del área (a través de Empleado)
-        # Nota: No hay link directo Usuario-Empleado, así que usamos área
         return False
 
     def get_queryset(self):
@@ -201,8 +209,15 @@ class PacienteDetailView(LoginRequiredMixin, DetailView):
         if user.is_superuser or user.rol in ['admin', 'orientador', 'recepcionista']:
             return base_qs
         if user.rol in ['psicologo', 'medico', 'trabajador_social', 'kinesiologo', 'psicomotricista', 'nutricionista', 'psicopedagogo', 'pedagogo', 'enfermero']:
+            profesional = getattr(user, 'empleado', None)
+            if profesional:
+                # Permitir si tiene turno, diagnóstico o seguimiento con este profesional
+                return base_qs.filter(
+                    models.Q(turnos__profesional=profesional) |
+                    models.Q(diagnosticos_area__profesional=profesional) |
+                    models.Q(seguimientos_trimestrales__profesional=profesional)
+                ).distinct()
             if user.area:
-                # Filtrar pacientes que tienen diagnosticos/seguimientos en el área del profesional
                 return base_qs.filter(
                     models.Q(diagnosticos_area__activo=True, diagnosticos_area__area=user.area) |
                     models.Q(seguimientos_trimestrales__activo=True, seguimientos_trimestrales__area=user.area)
@@ -263,6 +278,15 @@ class PacienteLegajoPrintView(LoginRequiredMixin, DetailView):
         raise PermissionDenied("No tiene permiso para imprimir legajos.")
 
     def paciente_en_area_del_profesional(self, paciente, user):
+        """Verifica si el paciente tiene relación con el profesional logueado."""
+        profesional = getattr(user, 'empleado', None)
+        if profesional:
+            if paciente.turnos.filter(profesional=profesional).exists():
+                return True
+            if paciente.diagnosticos_area.filter(activo=True, profesional=profesional).exists():
+                return True
+            if paciente.seguimientos_trimestrales.filter(activo=True, profesional=profesional).exists():
+                return True
         if not user.area:
             return False
         if paciente.diagnosticos_area.filter(activo=True, area=user.area).exists():
@@ -287,6 +311,13 @@ class PacienteLegajoPrintView(LoginRequiredMixin, DetailView):
         if user.is_superuser or user.rol in ['admin', 'orientador', 'recepcionista']:
             return base_qs
         if user.rol in ['psicologo', 'medico', 'trabajador_social', 'kinesiologo', 'psicomotricista', 'nutricionista', 'psicopedagogo', 'pedagogo', 'enfermero']:
+            profesional = getattr(user, 'empleado', None)
+            if profesional:
+                return base_qs.filter(
+                    models.Q(turnos__profesional=profesional) |
+                    models.Q(diagnosticos_area__profesional=profesional) |
+                    models.Q(seguimientos_trimestrales__profesional=profesional)
+                ).distinct()
             if user.area:
                 return base_qs.filter(
                     models.Q(diagnosticos_area__activo=True, diagnosticos_area__area=user.area) |
@@ -1029,6 +1060,15 @@ class SalasListView(LoginRequiredMixin, ListView):
     paginate_by = 20
     login_url = 'login'
 
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return self.handle_no_permission()
+        user = request.user
+        if user.rol in ['psicologo', 'medico', 'trabajador_social', 'kinesiologo', 
+                        'psicomotricista', 'nutricionista', 'psicopedagogo', 'pedagogo', 'enfermero']:
+            raise PermissionDenied("No tiene permiso para acceder a la gestión de salas.")
+        return super().dispatch(request, *args, **kwargs)
+
     def get_queryset(self):
         qs = Sala.objects.filter(activo=True).select_related('orientador__persona').order_by('nombre')
         
@@ -1107,6 +1147,62 @@ class SalaDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
         return redirect(self.success_url)
 
 
+class SalaDetailView(LoginRequiredMixin, DetailView):
+    model = Sala
+    template_name = 'salas/detail.html'
+    context_object_name = 'sala'
+    login_url = 'login'
+    pk_url_kwarg = 'pk'
+
+    def get_queryset(self):
+        return Sala.objects.filter(activo=True).select_related('orientador__persona')
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return self.handle_no_permission()
+        user = request.user
+        if user.rol in ['psicologo', 'medico', 'trabajador_social', 'kinesiologo', 
+                        'psicomotricista', 'nutricionista', 'psicopedagogo', 'pedagogo', 'enfermero']:
+            raise PermissionDenied("No tiene permiso para ver el detalle de salas.")
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        from pacientes.models import Paciente
+        from turnos.models import Turno
+        from pacientes.models import DiagnosticoArea, SeguimientoTrimestral
+        from django.db import models
+        
+        user = self.request.user
+        sala = self.object
+        
+        # Base queryset: pacientes de esta sala
+        concurrentes_qs = Paciente.objects.filter(sala=sala, activo=True).select_related('persona')
+        
+        # Filtrar por rol
+        if user.is_superuser or user.rol in ['admin', 'orientador', 'recepcionista']:
+            # Admin/Orientador/Recepcionista ven todos
+            pass
+        elif user.rol in ['psicologo', 'medico', 'trabajador_social', 'kinesiologo', 
+                          'psicomotricista', 'nutricionista', 'psicopedagogo', 'pedagogo', 'enfermero']:
+            # Profesional: solo pacientes con relación directa
+            profesional = getattr(user, 'empleado', None)
+            if profesional:
+                # Filtrar pacientes que tengan turnos, diagnósticos o seguimientos con este profesional
+                concurrentes_qs = concurrentes_qs.filter(
+                    models.Q(turnos__profesional=profesional) |
+                    models.Q(diagnosticos_area__profesional=profesional) |
+                    models.Q(seguimientos_trimestrales__profesional=profesional)
+                ).distinct()
+            else:
+                concurrentes_qs = Paciente.objects.none()
+        else:
+            concurrentes_qs = Paciente.objects.none()
+        
+        context['concurrentes_sala'] = concurrentes_qs.order_by('persona__apellido', 'persona__nombre')
+        return context
+
+
 # ============================================================
 # ÁREAS INTERDISCIPLINARIAS CRUD (HTML)
 # ============================================================
@@ -1117,6 +1213,15 @@ class AreasListView(LoginRequiredMixin, ListView):
     context_object_name = 'areas'
     paginate_by = 20
     login_url = 'login'
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return self.handle_no_permission()
+        user = request.user
+        if user.rol in ['psicologo', 'medico', 'trabajador_social', 'kinesiologo', 
+                        'psicomotricista', 'nutricionista', 'psicopedagogo', 'pedagogo', 'enfermero']:
+            raise PermissionDenied("No tiene permiso para acceder a la gestión de áreas.")
+        return super().dispatch(request, *args, **kwargs)
 
     def get_queryset(self):
         qs = AreaInterdisciplinaria.objects.filter(activo=True).order_by('nombre')
