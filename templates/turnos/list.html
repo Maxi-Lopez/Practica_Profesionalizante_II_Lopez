@@ -123,14 +123,19 @@
         {% endif %}
         
         <div class="mb-4">
-            <label for="id_paciente" class="block text-sm font-medium text-gray-700 mb-1">Concurrente *</label>
-            <select name="paciente" id="id_paciente" required 
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors">
-                <option value="">Seleccionar concurrente...</option>
-                {% for paciente in pacientes %}
-                    <option value="{{ paciente.pk }}">{{ paciente.persona.apellido }}, {{ paciente.persona.nombre }} - DNI: {{ paciente.persona.dni }}</option>
-                {% endfor %}
-            </select>
+            <label for="id_paciente_nombre" class="block text-sm font-medium text-gray-700 mb-1">Concurrente *</label>
+            <div class="relative">
+                <input type="text" name="paciente_nombre" id="id_paciente_nombre" required 
+                       list="lista-concurrentes"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
+                       placeholder="Escribí para buscar (Apellido, Nombre - DNI)...">
+                <datalist id="lista-concurrentes">
+                    {% for paciente in pacientes %}
+                        <option value="{{ paciente.persona.apellido }}, {{ paciente.persona.nombre }} - DNI: {{ paciente.persona.dni }}" data-id="{{ paciente.pk }}"></option>
+                    {% endfor %}
+                </datalist>
+                <input type="hidden" name="paciente_id" id="paciente_id_hidden">
+            </div>
             {% if form.paciente.errors %}
                 <p class="mt-1 text-sm text-red-600">{{ form.paciente.errors.0 }}</p>
             {% endif %}
@@ -173,7 +178,19 @@
             </select>
         </div>
         {% else %}
-            <input type="hidden" name="profesional" value="{{ profesional_id }}">
+            <input type="hidden" name="profesional_id" value="{{ profesional_id }}">
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Profesional</label>
+                <div class="px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-900">
+                    {% if profesionales %}
+                        {% for prof in profesionales %}
+                            {% if prof.id == profesional_id %}
+                                {{ prof.persona.apellido }}, {{ prof.persona.nombre }}
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
         {% endif %}
         
         <div class="grid grid-cols-2 gap-4 mb-4">
@@ -227,7 +244,81 @@ document.addEventListener('DOMContentLoaded', function() {
     const horaInicioInput = form.querySelector('[name="hora_inicio"]');
     const horaFinInput = form.querySelector('[name="hora_fin"]');
     const profesionalSelect = form.querySelector('[name="profesional"]');
-    const profesionalHidden = form.querySelector('[name="profesional"]') ? null : form.querySelector('[name="profesional"][type="hidden"]');
+    const profesionalHidden = form.querySelector('[name="profesional_id"]');
+    const pacienteNombreInput = form.querySelector('[name="paciente_nombre"]');
+    const pacienteIdHidden = form.querySelector('[name="paciente_id"]');
+    
+    // Función para obtener el ID del profesional
+    function getProfesionalId() {
+        if (profesionalSelect) {
+            return profesionalSelect.value;
+        }
+        if (profesionalHidden) {
+            return profesionalHidden.value;
+        }
+        // Fallback para profesional logueado
+        return '{{ profesional_id|default:"" }}';
+    }
+    
+    // Función para consultar disponibilidad
+    function checkDisponibilidad() {
+        const fecha = fechaInput.value;
+        const hInicio = horaInicioInput.value;
+        const hFin = horaFinInput.value;
+        const profId = getProfesionalId();
+
+        if (!fecha || !hInicio || !hFin || !profId) {
+            errorDiv.classList.add('hidden');
+            return;
+        }
+
+        fetch(`/api/turnos/disponibles/?fecha=${fecha}&hora_inicio=${hInicio}&hora_fin=${hFin}&profesional_id=${profId}`)
+            .then(res => res.json())
+            .then(data => {
+                if (!data.disponible) {
+                    errorDiv.innerHTML = `⚠️ ${data.mensaje} <br> Sugerencias: ` + 
+                        (data.sugerencias || []).map(s => 
+                            `<button type="button" onclick="document.querySelector('[name=hora_inicio]').value='${s.inicio}'; document.querySelector('[name=hora_fin]').value='${s.fin}'; checkDisponibilidad();" class="text-blue-600 underline mr-2">${s.inicio} - ${s.fin}</button>`
+                        ).join(' ');
+                    errorDiv.classList.remove('hidden');
+                } else {
+                    errorDiv.classList.add('hidden');
+                }
+            })
+            .catch(err => {
+                console.error('Error checking availability:', err);
+                errorDiv.classList.add('hidden');
+            });
+    }
+
+    // Sincronizar datalist de pacientes con el hidden input
+    if (pacienteNombreInput && pacienteIdHidden) {
+        pacienteNombreInput.addEventListener('input', function() {
+            // Buscar en el datalist la opción que coincida
+            const datalist = document.getElementById('lista-concurrentes');
+            if (datalist) {
+                const options = datalist.querySelectorAll('option');
+                options.forEach(opt => {
+                    if (opt.value === this.value) {
+                        pacienteIdHidden.value = opt.dataset.id;
+                    }
+                });
+            }
+        });
+        
+        // También al seleccionar del datalist (click en sugerencia)
+        pacienteNombreInput.addEventListener('change', function() {
+            const datalist = document.getElementById('lista-concurrentes');
+            if (datalist) {
+                const options = datalist.querySelectorAll('option');
+                options.forEach(opt => {
+                    if (opt.value === this.value) {
+                        pacienteIdHidden.value = opt.dataset.id;
+                    }
+                });
+            }
+        });
+    }
     
     // Función para obtener el ID del profesional
     function getProfesionalId() {

@@ -493,7 +493,8 @@ class TurnosListView(LoginRequiredMixin, TemplateView):
         if action != 'crear_turno':
             return self.get(request, *args, **kwargs)
         
-        paciente_id = request.POST.get('paciente')
+        # Leer paciente_id desde el nuevo campo (datalist) o el anterior (select)
+        paciente_id = request.POST.get('paciente_id') or request.POST.get('paciente')
         fecha = request.POST.get('fecha')
         hora_inicio = request.POST.get('hora_inicio')
         hora_fin = request.POST.get('hora_fin')
@@ -517,11 +518,18 @@ class TurnosListView(LoginRequiredMixin, TemplateView):
         user = request.user
         
         if user.is_superuser or user.rol in ['admin', 'recepcionista', 'orientador']:
-            # Admin/Recepción/Orientador: permitir seleccionar profesional (por ahora usamos el primero disponible)
-            # TODO: Agregar campo profesional en el formulario si es admin
-            profesional_qs = Empleado.objects.filter(activo=True).order_by('persona__apellido')
-            if user.rol == 'recepcionista' and profesional_qs.exists():
-                profesional = profesional_qs.first()
+            # Admin/Recepción/Orientador: leer profesional_id del formulario
+            profesional_id = request.POST.get('profesional_id') or request.POST.get('profesional')
+            if profesional_id:
+                try:
+                    profesional = Empleado.objects.get(pk=profesional_id, activo=True)
+                except Empleado.DoesNotExist:
+                    pass
+            # Fallback: primer profesional disponible
+            if not profesional:
+                profesional_qs = Empleado.objects.filter(activo=True).order_by('persona__apellido')
+                if profesional_qs.exists():
+                    profesional = profesional_qs.first()
         elif user.rol in ['psicologo', 'medico', 'trabajador_social', 'kinesiologo', 'psicomotricista', 'nutricionista', 'psicopedagogo', 'pedagogo', 'enfermero']:
             # Profesional: asignar automáticamente al profesional logueado
             if user.email:
