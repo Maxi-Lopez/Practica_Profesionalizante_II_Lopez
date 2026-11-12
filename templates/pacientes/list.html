@@ -74,11 +74,15 @@
                                     {% endif %}
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                    {% if perms.pacientes.change_paciente %}
                                     <a href="{% url 'paciente_update' paciente.pk %}" onclick="event.stopPropagation()" class="text-primary-600 hover:text-primary-900 mr-3">Editar</a>
+                                    {% endif %}
+                                    {% if perms.pacientes.delete_paciente %}
                                     <form action="{% url 'paciente_delete' paciente.pk %}" method="post" class="inline" onsubmit="event.stopPropagation(); return confirm('¿Está seguro de que desea dar de baja a este concurrente?');">
                                         {% csrf_token %}
                                         <button type="submit" class="text-red-600 hover:text-red-900">Eliminar</button>
                                     </form>
+                                    {% endif %}
                                 </td>
                             </tr>
                         {% endfor %}

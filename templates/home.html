@@ -64,15 +64,21 @@
     {% if user.is_authenticated %}
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
         <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-            <p class="text-sm text-gray-500">Total Concurrentes</p>
+            <p class="text-sm text-gray-500">
+                {% if es_profesional %}Mis Pacientes{% else %}Total Concurrentes{% endif %}
+            </p>
             <p class="text-3xl font-bold text-primary-600 mt-1">{% if pacientes_count %}{{ pacientes_count }}{% else %}—{% endif %}</p>
         </div>
         <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-            <p class="text-sm text-gray-500">Turnos Hoy</p>
+            <p class="text-sm text-gray-500">
+                {% if es_profesional %}Mis Turnos Hoy{% else %}Turnos Hoy{% endif %}
+            </p>
             <p class="text-3xl font-bold text-accent-600 mt-1">{% if turnos_hoy_count %}{{ turnos_hoy_count }}{% else %}—{% endif %}</p>
         </div>
         <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-            <p class="text-sm text-gray-500">Tratamientos Activos</p>
+            <p class="text-sm text-gray-500">
+                {% if es_profesional %}Mis Tratamientos Activos{% else %}Tratamientos Activos{% endif %}
+            </p>
             <p class="text-3xl font-bold text-green-600 mt-1">{% if tratamientos_count %}{{ tratamientos_count }}{% else %}—{% endif %}</p>
         </div>
         <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
