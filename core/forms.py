@@ -634,10 +634,18 @@ class SeguimientoTrimestralForm(forms.ModelForm):
         fields = ['paciente', 'area', 'fecha', 'observaciones', 'profesional', 'es_intervencion_mensual']
 
     def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
         self.fields['paciente'].queryset = Paciente.objects.filter(activo=True).select_related('persona').order_by('persona__apellido', 'persona__nombre')
         self.fields['area'].queryset = AreaInterdisciplinaria.objects.filter(activo=True).order_by('nombre')
         self.fields['profesional'].queryset = Empleado.objects.filter(activo=True).select_related('persona').order_by('persona__apellido', 'persona__nombre')
+        
+        # Restringir campos para profesionales (no admin/orientador/recepcionista)
+        if user and user.rol in ['psicologo', 'medico', 'trabajador_social', 'kinesiologo', 
+                                'psicomotricista', 'nutricionista', 'psicopedagogo', 'pedagogo', 'enfermero']:
+            for field_name in ['paciente', 'area', 'fecha', 'profesional']:
+                self.fields[field_name].disabled = True
+                self.fields[field_name].widget.attrs['class'] += ' bg-gray-100 cursor-not-allowed'
 
 
 class DocumentoForm(forms.ModelForm):

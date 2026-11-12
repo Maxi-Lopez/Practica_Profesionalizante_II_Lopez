@@ -31,6 +31,7 @@ from .views import (
     SalaCreateView,
     SalaUpdateView,
     SalaDeleteView,
+    SalaDetailView,
     AreasListView,
     AreaCreateView,
     AreaUpdateView,
@@ -120,6 +121,7 @@ urlpatterns = [
     path('salas/crear/', SalaCreateView.as_view(), name='sala_create'),
     path('salas/editar/<int:pk>/', SalaUpdateView.as_view(), name='sala_update'),
     path('salas/eliminar/<int:pk>/', SalaDeleteView.as_view(), name='sala_delete'),
+    path('salas/<int:pk>/', SalaDetailView.as_view(), name='sala_detail'),
     
     # Áreas CRUD
     path('areas/', AreasListView.as_view(), name='areas_list'),
