@@ -74,27 +74,61 @@ class HomeView(TemplateView):
                 context['empleados_count'] = Empleado.objects.filter(activo=True).count()
                 context['es_admin'] = False
             elif user.rol in ['psicologo', 'medico', 'trabajador_social', 'kinesiologo', 'psicomotricista', 'nutricionista', 'psicopedagogo', 'pedagogo', 'enfermero']:
-                # Profesionales ven solo sus pacientes/turnos/tratamientos
+                # Profesionales ven sus pacientes/turnos/tratamientos basados en su empleado vinculado y/o área
+                profesional = getattr(user, 'empleado', None)
+                
+                # Pacientes del área del profesional (diagnósticos/seguimientos)
+                pacientes_area = Paciente.objects.none()
                 if user.area:
-                    pacientes_qs = Paciente.objects.filter(activo=True).filter(
+                    pacientes_area = Paciente.objects.filter(activo=True).filter(
                         models.Q(diagnosticos_area__activo=True, diagnosticos_area__area=user.area) |
                         models.Q(seguimientos_trimestrales__activo=True, seguimientos_trimestrales__area=user.area)
                     ).distinct()
-                    
-                    context['pacientes_count'] = pacientes_qs.count()
-                    context['turnos_hoy_count'] = Turno.objects.filter(
-                        fecha=hoy,
-                        paciente__in=pacientes_qs
-                    ).exclude(estado=EstadoTurno.CANCELADO).count()
-                    context['tratamientos_count'] = PlanTratamiento.objects.filter(
-                        activo=True, paciente__in=pacientes_qs
+                
+                # Pacientes de los turnos del profesional
+                pacientes_turnos = Paciente.objects.none()
+                if profesional:
+                    pacientes_turnos = Paciente.objects.filter(
+                        turnos__profesional=profesional,
+                        activo=True
+                    ).distinct()
+                
+                # Unión de ambos: todos los pacientes "del" profesional
+                pacientes_qs = (pacientes_area | pacientes_turnos).distinct()
+                
+                context['pacientes_count'] = pacientes_qs.count()
+                context['turnos_hoy_count'] = Turno.objects.filter(
+                    fecha=hoy,
+                    paciente__in=pacientes_qs
+                ).exclude(estado=EstadoTurno.CANCELADO).count()
+                context['tratamientos_count'] = PlanTratamiento.objects.filter(
+                    activo=True, paciente__in=pacientes_qs
+                ).count()
+                context['empleados_count'] = 0  # No relevante para profesionales
+                
+                # NUEVO: Métricas específicas para "Mi Resumen" del profesional
+                
+                # mis_turnos: turnos asignados al profesional con estado PENDIENTE o CONFIRMADO
+                mis_turnos = 0
+                if profesional:
+                    mis_turnos = Turno.objects.filter(
+                        profesional=profesional,
+                        estado__in=[EstadoTurno.PENDIENTE, EstadoTurno.CONFIRMADO]
                     ).count()
-                    context['empleados_count'] = 0  # No relevante para profesionales
-                else:
-                    context['pacientes_count'] = 0
-                    context['turnos_hoy_count'] = 0
-                    context['tratamientos_count'] = 0
-                    context['empleados_count'] = 0
+                
+                # mis_pacientes: pacientes distintos de sus turnos O diagnósticos/seguimientos en su área
+                mis_pacientes = pacientes_qs.count()
+                
+                # mis_tratamientos: PlanTratamiento activos de sus pacientes
+                mis_tratamientos = PlanTratamiento.objects.filter(
+                    activo=True, 
+                    paciente__in=pacientes_qs
+                ).count()
+                
+                context['mis_turnos'] = mis_turnos
+                context['mis_pacientes'] = mis_pacientes
+                context['mis_tratamientos'] = mis_tratamientos
+                
                 context['es_admin'] = False
                 context['es_profesional'] = True
             else:
