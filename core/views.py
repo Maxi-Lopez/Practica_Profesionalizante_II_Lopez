@@ -310,6 +310,8 @@ class PacientesListView(LoginRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         from pacientes.models import Paciente
+        from personas.models import Email
+        from django.db.models import Q
         user = self.request.user
         
         base_qs = Paciente.objects.select_related('persona', 'obra_social').filter(activo=True).order_by('-fecha_ingreso')
@@ -322,7 +324,6 @@ class PacientesListView(LoginRequiredMixin, TemplateView):
             profesional_qs = Paciente.objects.none()
             if user.email:
                 # Buscar empleados vinculados por email
-                from personas.models import Email
                 empleado_personas = Email.objects.filter(
                     direccion_email=user.email, activo=True
                 ).values_list('persona_id', flat=True)
@@ -335,8 +336,8 @@ class PacientesListView(LoginRequiredMixin, TemplateView):
             area_qs = Paciente.objects.none()
             if user.area:
                 area_qs = base_qs.filter(
-                    models.Q(diagnosticos_area__activo=True, diagnosticos_area__area=user.area) |
-                    models.Q(seguimientos_trimestrales__activo=True, seguimientos_trimestrales__area=user.area)
+                    Q(diagnosticos_area__activo=True, diagnosticos_area__area=user.area) |
+                    Q(seguimientos_trimestrales__activo=True, seguimientos_trimestrales__area=user.area)
                 ).distinct()
             
             # Unir ambos querysets
@@ -350,6 +351,16 @@ class PacientesListView(LoginRequiredMixin, TemplateView):
                 context['pacientes'] = Paciente.objects.none()
         else:
             context['pacientes'] = Paciente.objects.none()
+        
+        # Aplicar búsqueda si existe el parámetro
+        search = self.request.GET.get('search', '').strip()
+        if search:
+            search_q = Q(persona__nombre__icontains=search) | \
+                       Q(persona__apellido__icontains=search) | \
+                       Q(persona__dni__icontains=search) | \
+                       Q(obra_social__nombre__icontains=search)
+            context['pacientes'] = context['pacientes'].filter(search_q)
+        
         return context
 
 
@@ -448,6 +459,17 @@ class TurnosListView(LoginRequiredMixin, TemplateView):
                 context['turnos'] = Turno.objects.none()
         else:
             context['turnos'] = Turno.objects.none()
+        
+        # Aplicar búsqueda si existe el parámetro
+        search = self.request.GET.get('search', '').strip()
+        if search:
+            search_q = Q(paciente__persona__nombre__icontains=search) | \
+                       Q(paciente__persona__apellido__icontains=search) | \
+                       Q(paciente__persona__dni__icontains=search) | \
+                       Q(profesional__persona__nombre__icontains=search) | \
+                       Q(profesional__persona__apellido__icontains=search) | \
+                       Q(servicio__nombre__icontains=search)
+            context['turnos'] = context['turnos'].filter(search_q)
         
         # Para el modal: pacientes y servicios
         context['pacientes'] = Paciente.objects.filter(activo=True).select_related('persona').order_by('persona__apellido', 'persona__nombre')
