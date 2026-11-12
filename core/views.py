@@ -1,6 +1,8 @@
 from django.views.generic import TemplateView, CreateView, UpdateView, DeleteView, ListView, DetailView
 from django.contrib.auth.views import LoginView, LogoutView
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
 from django.shortcuts import render, redirect
 from django.contrib.auth import login
 from django.contrib import messages
@@ -13,8 +15,10 @@ from django.http import JsonResponse
 
 from usuarios.models import Usuario
 from usuarios.forms import UsuarioAdminForm
+from core.forms import TurnoForm
 from core.forms import PacienteForm, EmpleadoForm, DocumentoForm, SalaForm, AreaInterdisciplinariaForm, DiagnosticoAreaForm, SeguimientoTrimestralForm, ProveedorForm, TipoGastoForm, CompraForm, GastoForm, PlanTratamientoForm, ObjetivoTratamientoForm, ActividadPlanForm, HistorialMedicoForm, EvolucionSemanalForm, RegistroActividadForm, NotaImportanteForm
 from pacientes.models import Sala, AreaInterdisciplinaria, DiagnosticoArea, SeguimientoTrimestral, Paciente
+from turnos.models import Turno, EstadoTurno
 from compras.models import Proveedor, Compra, TipoGasto, Gasto
 from tratamientos.models import PlanTratamiento, ObjetivoTratamiento, ActividadPlan, HistorialMedico, EvolucionSemanal, RegistroActividad, NotaImportante
 
@@ -422,9 +426,10 @@ class TurnosListView(LoginRequiredMixin, TemplateView):
         from servicios.models import Servicio
         from pacientes.models import Paciente
         from empleados.models import Empleado
-        from personas.models import Email
         from django.utils import timezone
         from django.db.models import Q
+        import logging
+        logger = logging.getLogger(__name__)
         user = self.request.user
         
         base_qs = Turno.objects.select_related(
@@ -434,17 +439,13 @@ class TurnosListView(LoginRequiredMixin, TemplateView):
         if user.is_superuser or user.rol in ['admin', 'orientador', 'recepcionista']:
             context['turnos'] = base_qs
         elif user.rol in ['psicologo', 'medico', 'trabajador_social', 'kinesiologo', 'psicomotricista', 'nutricionista', 'psicopedagogo', 'pedagogo', 'enfermero']:
-            # Profesional: ver solo SUS turnos asignados (vinculados por email)
-            profesional_qs = Turno.objects.none()
-            if user.email:
-                empleado_personas = Email.objects.filter(
-                    direccion_email=user.email, activo=True
-                ).values_list('persona_id', flat=True)
-                if empleado_personas:
-                    profesional_qs = base_qs.filter(
-                        profesional__persona_id__in=empleado_personas
-                    ).distinct()
-            context['turnos'] = profesional_qs
+            # Profesional: ver solo SUS turnos (vinculado directo Empleado.usuario)
+            prof = self._get_profesional_for_user(user)
+            if prof:
+                context['turnos'] = base_qs.filter(profesional=prof)
+            else:
+                logger.warning(f"No se encontró Empleado para usuario {user.username} (rol: {user.rol})")
+                context['turnos'] = Turno.objects.none()
         else:
             context['turnos'] = Turno.objects.none()
         
@@ -467,14 +468,11 @@ class TurnosListView(LoginRequiredMixin, TemplateView):
         
         # ID del profesional actual (para profesionales)
         if user.rol in ['psicologo', 'medico', 'trabajador_social', 'kinesiologo', 'psicomotricista', 'nutricionista', 'psicopedagogo', 'pedagogo', 'enfermero']:
-            if user.email:
-                empleado_personas = Email.objects.filter(
-                    direccion_email=user.email, activo=True
-                ).values_list('persona_id', flat=True)
-                if empleado_personas:
-                    prof = Empleado.objects.filter(persona_id__in=empleado_personas, activo=True).first()
-                    if prof:
-                        context['profesional_id'] = prof.id
+            prof = self._get_profesional_for_user(user)
+            if prof:
+                context['profesional_id'] = prof.id
+            else:
+                logger.warning(f"No se encontró Empleado para usuario {user.username} (email: {user.email}, rol: {user.rol})")
         
         context['hoy'] = timezone.now().date()
         
@@ -487,19 +485,28 @@ class TurnosListView(LoginRequiredMixin, TemplateView):
         
         return context
     
+    def _get_profesional_for_user(self, user):
+        """Busca el Empleado vinculado directamente al Usuario."""
+        if hasattr(user, 'empleado') and user.empleado and user.empleado.activo:
+            return user.empleado
+        return None
+    
     def post(self, request, *args, **kwargs):
         from turnos.models import Turno, EstadoTurno
         from pacientes.models import Paciente
         from servicios.models import Servicio
         from empleados.models import Empleado
-        from personas.models import Email
         from django.utils import timezone
         from django.db.models import Q
         from django.contrib import messages
+        from datetime import datetime
         
         action = request.POST.get('action')
-        if action != 'crear_turno':
+        if action not in ['crear_turno', 'editar_turno']:
             return self.get(request, *args, **kwargs)
+        
+        is_editing = action == 'editar_turno'
+        turno_id = request.POST.get('turno_id') if is_editing else None
         
         # Leer paciente_id desde el nuevo campo (datalist) o el anterior (select)
         paciente_id = request.POST.get('paciente_id') or request.POST.get('paciente')
@@ -514,6 +521,19 @@ class TurnosListView(LoginRequiredMixin, TemplateView):
             messages.error(request, 'Todos los campos obligatorios deben completarse.')
             return self.get(request, *args, **kwargs)
         
+        # Validar que la fecha/hora no sea pasada (solo para creación, en edición permitimos mantener si ya pasó)
+        if not is_editing:
+            try:
+                fecha_turno = datetime.strptime(fecha, '%Y-%m-%d').date()
+                hora_inicio_dt = datetime.strptime(hora_inicio, '%H:%M').time()
+                turno_datetime = timezone.make_aware(datetime.combine(fecha_turno, hora_inicio_dt))
+                if turno_datetime < timezone.now():
+                    messages.error(request, 'No se puede agendar un turno en el pasado.')
+                    return self.get(request, *args, **kwargs)
+            except ValueError:
+                messages.error(request, 'Formato de fecha u hora inválido.')
+                return self.get(request, *args, **kwargs)
+        
         try:
             paciente = Paciente.objects.get(pk=paciente_id, activo=True)
             servicio = Servicio.objects.get(pk=servicio_id, activo=True)
@@ -526,59 +546,77 @@ class TurnosListView(LoginRequiredMixin, TemplateView):
         user = request.user
         
         if user.is_superuser or user.rol in ['admin', 'recepcionista', 'orientador']:
-            # Admin/Recepción/Orientador: leer profesional_id del formulario
             profesional_id = request.POST.get('profesional_id') or request.POST.get('profesional')
             if profesional_id:
                 try:
                     profesional = Empleado.objects.get(pk=profesional_id, activo=True)
                 except Empleado.DoesNotExist:
                     pass
-            # Fallback: primer profesional disponible
             if not profesional:
                 profesional_qs = Empleado.objects.filter(activo=True).order_by('persona__apellido')
                 if profesional_qs.exists():
                     profesional = profesional_qs.first()
         elif user.rol in ['psicologo', 'medico', 'trabajador_social', 'kinesiologo', 'psicomotricista', 'nutricionista', 'psicopedagogo', 'pedagogo', 'enfermero']:
-            # Profesional: asignar automáticamente al profesional logueado
-            if user.email:
-                empleado_personas = Email.objects.filter(
-                    direccion_email=user.email, activo=True
-                ).values_list('persona_id', flat=True)
-                if empleado_personas:
-                    profesional = Empleado.objects.filter(
-                        persona_id__in=empleado_personas, activo=True
-                    ).first()
+            profesional = self._get_profesional_for_user(user)
         
         if not profesional:
-            messages.error(request, 'No se pudo determinar el profesional para el turno.')
+            messages.error(request, 'No se pudo determinar el profesional para el turno. Verifique que su usuario esté vinculado a un empleado.')
             return self.get(request, *args, **kwargs)
         
-        # Validar solapamiento de horarios
-        solapamiento = Turno.objects.filter(
+        # Validar solapamiento de horarios (excluyendo el turno actual si estamos editando)
+        solapamiento_qs = Turno.objects.filter(
             profesional=profesional,
             fecha=fecha,
             estado__in=[EstadoTurno.PENDIENTE, EstadoTurno.CONFIRMADO],
         ).filter(
             Q(hora_inicio__lt=hora_fin) & Q(hora_fin__gt=hora_inicio)
-        ).exists()
+        )
+        if is_editing and turno_id:
+            solapamiento_qs = solapamiento_qs.exclude(pk=turno_id)
         
-        if solapamiento:
+        if solapamiento_qs.exists():
             messages.error(request, f'El profesional ya tiene un turno en ese horario.')
             return self.get(request, *args, **kwargs)
         
-        # Crear el turno
-        turno = Turno.objects.create(
-            paciente=paciente,
-            profesional=profesional,
-            servicio=servicio,
-            fecha=fecha,
-            hora_inicio=hora_inicio,
-            hora_fin=hora_fin,
-            estado=EstadoTurno.PENDIENTE,
-            observaciones=observaciones,
-        )
+        if is_editing and turno_id:
+            # Editar turno existente
+            try:
+                turno = Turno.objects.get(pk=turno_id)
+            except Turno.DoesNotExist:
+                messages.error(request, 'Turno no encontrado.')
+                return self.get(request, *args, **kwargs)
+            
+            # Verificar permisos: profesional solo puede editar sus propios turnos
+            if user.rol in ['psicologo', 'medico', 'trabajador_social', 'kinesiologo', 'psicomotricista', 'nutricionista', 'psicopedagogo', 'pedagogo', 'enfermero']:
+                if turno.profesional != profesional:
+                    messages.error(request, 'No tiene permiso para editar este turno.')
+                    return self.get(request, *args, **kwargs)
+            
+            turno.paciente = paciente
+            turno.profesional = profesional
+            turno.servicio = servicio
+            turno.fecha = fecha
+            turno.hora_inicio = hora_inicio
+            turno.hora_fin = hora_fin
+            turno.observaciones = observaciones
+            turno.save()
+            
+            messages.success(request, f'Turno actualizado exitosamente para {paciente.persona} el {fecha}.')
+        else:
+            # Crear nuevo turno
+            turno = Turno.objects.create(
+                paciente=paciente,
+                profesional=profesional,
+                servicio=servicio,
+                fecha=fecha,
+                hora_inicio=hora_inicio,
+                hora_fin=hora_fin,
+                estado=EstadoTurno.PENDIENTE,
+                observaciones=observaciones,
+            )
+            
+            messages.success(request, f'Turno agendado exitosamente para {paciente.persona} el {fecha}.')
         
-        messages.success(request, f'Turno agendado exitosamente para {paciente.persona} el {fecha}.')
         return self.get(request, *args, **kwargs)
 
 
@@ -655,6 +693,72 @@ def turnos_disponibilidad(request):
         })
     
     return JsonResponse({'disponible': True})
+
+
+class TurnoUpdateView(LoginRequiredMixin, UpdateView):
+    model = Turno
+    form_class = TurnoForm
+    template_name = 'turnos/form.html'
+    success_url = reverse_lazy('turnos_list')
+    login_url = 'login'
+    pk_url_kwarg = 'pk'
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
+    
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_superuser or user.rol in ['admin', 'recepcionista', 'orientador']:
+            return Turno.objects.all()
+        if hasattr(user, 'empleado') and user.empleado:
+            return Turno.objects.filter(profesional=user.empleado)
+        return Turno.objects.none()
+    
+    def form_valid(self, form):
+        messages.success(self.request, 'Turno actualizado exitosamente.')
+        return super().form_valid(form)
+    
+    def form_invalid(self, form):
+        messages.error(self.request, 'Error al actualizar el turno. Verifique los datos.')
+        return super().form_invalid(form)
+
+
+@login_required
+@require_POST
+def cambiar_estado_turno(request, pk, nuevo_estado):
+    from turnos.models import Turno, EstadoTurno
+    from django.shortcuts import get_object_or_404, redirect
+    from django.contrib import messages
+    
+    turno = get_object_or_404(Turno, pk=pk)
+    
+    # Validar permisos
+    user = request.user
+    is_admin = user.is_superuser or user.rol in ['admin', 'recepcionista']
+    is_profesional = user.rol in ['psicologo', 'medico', 'trabajador_social', 'kinesiologo', 'psicomotricista', 'nutricionista', 'psicopedagogo', 'pedagogo', 'enfermero']
+    
+    if not (is_admin or (is_profesional and hasattr(user, 'empleado') and user.empleado and turno.profesional == user.empleado)):
+        messages.error(request, 'No tiene permiso para cambiar el estado de este turno.')
+        return redirect('turnos_list')
+    
+    # Validar estado
+    estados_validos = [EstadoTurno.REALIZADO, EstadoTurno.CANCELADO, EstadoTurno.AUSENTE]
+    if nuevo_estado not in estados_validos:
+        messages.error(request, 'Estado no válido.')
+        return redirect('turnos_list')
+    
+    # No permitir cambiar estado si ya está finalizado
+    if turno.estado in [EstadoTurno.REALIZADO, EstadoTurno.CANCELADO, EstadoTurno.AUSENTE]:
+        messages.error(request, 'No se puede cambiar el estado de un turno ya finalizado.')
+        return redirect('turnos_list')
+    
+    turno.estado = nuevo_estado
+    turno.save(update_fields=['estado'])
+    
+    messages.success(request, f'Turno marcado como {turno.get_estado_display().lower()}.')
+    return redirect('turnos_list')
 
 
 class TratamientosListView(LoginRequiredMixin, TemplateView):

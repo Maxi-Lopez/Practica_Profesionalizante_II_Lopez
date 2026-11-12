@@ -50,7 +50,19 @@
                     </thead>
                     <tbody class="divide-y divide-gray-200">
                         {% for turno in turnos %}
-                            <tr class="hover:bg-gray-50 {% if turno.fecha == hoy %}bg-accent-50{% endif %}">
+                            <tr class="hover:bg-gray-50 {% if turno.fecha == hoy %}bg-accent-50{% endif %} cursor-pointer"
+                                onclick="abrirModalDetalle(this)"
+                                data-id="{{ turno.id }}"
+                                data-paciente="{{ turno.paciente.persona.apellido }}, {{ turno.paciente.persona.nombre }}"
+                                data-paciente-dni="{{ turno.paciente.persona.dni }}"
+                                data-fecha="{{ turno.fecha|date:'d/m/Y' }}"
+                                data-fecha-iso="{{ turno.fecha|date:'Y-m-d' }}"
+                                data-hora-inicio="{{ turno.hora_inicio|time:'H:i' }}"
+                                data-hora-fin="{{ turno.hora_fin|time:'H:i' }}"
+                                data-profesional="{{ turno.profesional.persona.apellido }}, {{ turno.profesional.persona.nombre }}"
+                                data-servicio="{{ turno.servicio.nombre }}"
+                                data-estado="{{ turno.estado }}"
+                                data-observaciones="{{ turno.observaciones|default:'' }}">
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="text-sm font-medium text-gray-900">{{ turno.fecha|date:"d/m/Y" }}</div>
                                     {% if turno.fecha == hoy %}<span class="text-xs bg-accent-100 text-accent-800 px-2 py-0.5 rounded">Hoy</span>{% endif %}
@@ -75,8 +87,7 @@
                                     {% endif %}
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                    <a href="#" class="text-primary-600 hover:text-primary-900 mr-3">Ver</a>
-                                    <a href="#" class="text-gray-600 hover:text-gray-900">Editar</a>
+                                    <a href="{% url 'turno_update' turno.pk %}" onclick="event.stopPropagation()" class="text-gray-600 hover:text-gray-900">Editar</a>
                                 </td>
                             </tr>
                         {% endfor %}
@@ -146,7 +157,8 @@
                 <label for="id_fecha" class="block text-sm font-medium text-gray-700 mb-1">Fecha *</label>
                 <input type="date" name="fecha" id="id_fecha" required 
                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
-                       value="{{ today }}">
+                       value="{{ today }}"
+                       min="{{ today|date:"Y-m-d" }}">
                 {% if form.fecha.errors %}
                     <p class="mt-1 text-sm text-red-600">{{ form.fecha.errors.0 }}</p>
                 {% endif %}
@@ -177,14 +189,23 @@
                 {% endfor %}
             </select>
         </div>
-        {% else %}
-        <div class="mb-4">
-            <label class="block text-sm font-medium text-gray-700 mb-1">Profesional</label>
-            <div class="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-700">
-                {{ request.user.get_full_name|default:request.user.username }} ({{ request.user.get_rol_display }})
-            </div>
-            <input type="hidden" name="profesional_id" value="{{ profesional_id }}">
-        {% endif %}
+{% else %}
+    <!-- PROFESIONAL: Texto fijo, sin select -->
+    {% if profesional_id %}
+    <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-1">Profesional</label>
+        <div class="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-700">
+            {{ request.user.get_full_name|default:request.user.username }} ({{ request.user.get_rol_display }})
+        </div>
+        <input type="hidden" name="profesional_id" value="{{ profesional_id }}">
+    </div>
+    {% else %}
+    <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700">
+        <strong>Error:</strong> No se pudo determinar su perfil de profesional. No puede agendar turnos hasta que un administrador vincule su usuario a un empleado.
+        <br>Contacte al administrador del sistema.
+    </div>
+    {% endif %}
+{% endif %}
         
         <div class="grid grid-cols-2 gap-4 mb-4">
             <div>
@@ -217,6 +238,7 @@
         
         <!-- Disponibilidad / Conflicto -->
         <div id="availability-error" class="hidden text-red-600 text-sm mb-4"></div>
+        <div id="past-error" class="hidden text-red-600 text-sm mb-4"></div>
         
         <div>
             <label for="id_observaciones" class="block text-sm font-medium text-gray-700 mb-1">Observaciones (opcional)</label>
@@ -225,6 +247,7 @@
         </div>
         
         <input type="hidden" name="action" value="crear_turno">
+        <input type="hidden" name="turno_id" value="">
         
         <div class="flex justify-end gap-2 mt-6">
             <button type="button" onclick="document.getElementById('modal-turno').close()" class="px-4 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition-colors">
@@ -237,10 +260,92 @@
     </form>
 </dialog>
 
+<!-- Modal nativo para Detalle de Turno -->
+<dialog id="modal-detalle-turno" class="p-0 rounded-lg shadow-xl backdrop:bg-black/50 w-full max-w-lg">
+    <div class="bg-white p-6 rounded-lg relative">
+        <button type="button" onclick="document.getElementById('modal-detalle-turno').close()" class="absolute top-4 right-4 text-gray-500 hover:text-gray-700 text-2xl leading-none">&times;</button>
+        
+        <h2 class="text-xl font-bold mb-4">Detalle del Turno</h2>
+        
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-500 mb-1">ID</label>
+                <span id="detalle-id" class="text-sm text-gray-900 font-mono"></span>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-500 mb-1">Concurrente</label>
+                <span id="detalle-paciente" class="text-sm text-gray-900"></span>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-500 mb-1">DNI Concurrente</label>
+                <span id="detalle-paciente-dni" class="text-sm text-gray-900"></span>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-500 mb-1">Fecha</label>
+                    <span id="detalle-fecha" class="text-sm text-gray-900"></span>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-500 mb-1">Hora</label>
+                    <span id="detalle-hora" class="text-sm text-gray-900"></span>
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-500 mb-1">Profesional</label>
+                <span id="detalle-profesional" class="text-sm text-gray-900"></span>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-500 mb-1">Servicio / Motivo</label>
+                <span id="detalle-servicio" class="text-sm text-gray-900"></span>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-500 mb-1">Estado</label>
+                <span id="detalle-estado" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"></span>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-500 mb-1">Observaciones</label>
+                <p id="detalle-observaciones" class="text-sm text-gray-900 whitespace-pre-wrap"></p>
+            </div>
+        </div>
+        
+        <!-- Botones de cambio de estado (solo si el turno está pendiente o confirmado) -->
+        <div id="detalle-acciones-estado" class="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-200 hidden">
+            <form method="post" id="form-estado-realizado" class="inline">
+                {% csrf_token %}
+                <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors">
+                    Marcar como Realizado
+                </button>
+            </form>
+            <form method="post" id="form-estado-cancelado" class="inline">
+                {% csrf_token %}
+                <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors">
+                    Cancelar Turno
+                </button>
+            </form>
+            <form method="post" id="form-estado-ausente" class="inline">
+                {% csrf_token %}
+                <button type="submit" class="px-4 py-2 bg-gray-600 text-white rounded-lg font-medium hover:bg-gray-700 transition-colors">
+                    Marcar como Ausente
+                </button>
+            </form>
+        </div>
+        
+        <div class="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-200">
+            <button type="button" onclick="document.getElementById('modal-detalle-turno').close()" class="px-4 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                Cerrar
+            </button>
+            <a href="#" id="detalle-btn-editar" onclick="event.preventDefault(); abrirModalEdicionDesdeDetalle()" class="px-4 py-2 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-colors inline-flex items-center">
+                Editar Turno
+            </a>
+        </div>
+    </div>
+</dialog>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('form-turno');
     const errorDiv = document.getElementById('availability-error');
+    const pastErrorDiv = document.getElementById('past-error');
     
     // Obtener referencias a los campos
     const fechaInput = form.querySelector('[name="fecha"]');
@@ -250,6 +355,38 @@ document.addEventListener('DOMContentLoaded', function() {
     const profesionalHidden = form.querySelector('[name="profesional_id"][type="hidden"]');
     const pacienteNombreInput = form.querySelector('[name="paciente_nombre"]');
     const pacienteIdHidden = form.querySelector('[name="paciente_id"]');
+    
+    // Establecer fecha mínima como hoy
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    if (fechaInput && !fechaInput.hasAttribute('min')) {
+        fechaInput.setAttribute('min', todayStr);
+    }
+    
+    // Función para validar que la fecha/hora no sea pasada
+    function checkNotPast() {
+        const fecha = fechaInput.value;
+        const hInicio = horaInicioInput.value;
+        
+        if (!fecha || !hInicio) {
+            if (pastErrorDiv) pastErrorDiv.classList.add('hidden');
+            return true;
+        }
+        
+        const now = new Date();
+        const selected = new Date(fecha + 'T' + hInicio);
+        
+        if (selected < now) {
+            if (pastErrorDiv) {
+                pastErrorDiv.textContent = 'No se puede agendar un turno en el pasado.';
+                pastErrorDiv.classList.remove('hidden');
+            }
+            return false;
+        }
+        
+        if (pastErrorDiv) pastErrorDiv.classList.add('hidden');
+        return true;
+    }
     
     // Función para obtener el ID del profesional
     function getProfesionalId() {
@@ -293,7 +430,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 errorDiv.classList.add('hidden');
             });
     }
-
+    
     // Sincronizar datalist de pacientes con el hidden input
     if (pacienteNombreInput && pacienteIdHidden) {
         pacienteNombreInput.addEventListener('input', function() {
@@ -322,53 +459,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-    
-    // Función para obtener el ID del profesional
-    function getProfesionalId() {
-        if (profesionalSelect) {
-            return profesionalSelect.value;
-        }
-        if (profesionalHidden) {
-            return profesionalHidden.value;
-        }
-        // Fallback para profesional logueado (input hidden con name="profesional_id")
-        const hiddenProf = form.querySelector('[name="profesional_id"][type="hidden"]');
-        if (hiddenProf) {
-            return hiddenProf.value;
-        }
-        return '{{ profesional_id|default:"" }}';
-    }
-    
-    // Función para consultar disponibilidad
-    function checkDisponibilidad() {
-        const fecha = fechaInput.value;
-        const hInicio = horaInicioInput.value;
-        const hFin = horaFinInput.value;
-        const profId = getProfesionalId();
-
-        if (!fecha || !hInicio || !hFin || !profId) {
-            errorDiv.classList.add('hidden');
-            return;
-        }
-
-        fetch(`/api/turnos/disponibles/?fecha=${fecha}&hora_inicio=${hInicio}&hora_fin=${hFin}&profesional_id=${profId}`)
-            .then(res => res.json())
-            .then(data => {
-                if (!data.disponible) {
-                    errorDiv.innerHTML = `⚠️ ${data.mensaje} <br> Sugerencias: ` + 
-                        (data.sugerencias || []).map(s => 
-                            `<button type="button" onclick="document.querySelector('[name=hora_inicio]').value='${s.inicio}'; document.querySelector('[name=hora_fin]').value='${s.fin}'; checkDisponibilidad();" class="text-blue-600 underline mr-2">${s.inicio} - ${s.fin}</button>`
-                        ).join(' ');
-                    errorDiv.classList.remove('hidden');
-                } else {
-                    errorDiv.classList.add('hidden');
-                }
-            })
-            .catch(err => {
-                console.error('Error checking availability:', err);
-                errorDiv.classList.add('hidden');
-            });
-    }
 
     // Escuchar cambios en los inputs
     [fechaInput, horaInicioInput, horaFinInput].forEach(input => {
@@ -393,13 +483,139 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // Prevenir envío si hay error de disponibilidad
+    // Prevenir envío si hay error de disponibilidad o fecha pasada
     form.addEventListener('submit', function(e) {
         if (!errorDiv.classList.contains('hidden')) {
             e.preventDefault();
             alert('No se puede agendar: hay un conflicto de horario. Por favor, elige otra hora.');
+            return;
+        }
+        if (!checkNotPast()) {
+            e.preventDefault();
+            return;
         }
     });
+    
+    // También validar al cambiar fecha/hora
+    [fechaInput, horaInicioInput].forEach(input => {
+        if (input) {
+            input.addEventListener('change', checkNotPast);
+            input.addEventListener('blur', checkNotPast);
+        }
+    });
+});
+
+// Variable global para guardar el turno actual en edición
+let turnoEnEdicion = null;
+
+// Función para abrir modal de detalle
+function abrirModalDetalle(trElement) {
+    const modal = document.getElementById('modal-detalle-turno');
+    if (!modal) return;
+    
+    // Leer data-* attributes
+    const id = trElement.dataset.id;
+    const paciente = trElement.dataset.paciente;
+    const pacienteDni = trElement.dataset.pacienteDni;
+    const fecha = trElement.dataset.fecha;
+    const horaInicio = trElement.dataset.horaInicio;
+    const horaFin = trElement.dataset.horaFin;
+    const profesional = trElement.dataset.profesional;
+    const servicio = trElement.dataset.servicio;
+    const estado = trElement.dataset.estado;
+    const observaciones = trElement.dataset.observaciones;
+    
+    // Poblar el modal
+    document.getElementById('detalle-id').textContent = id;
+    document.getElementById('detalle-paciente').textContent = paciente;
+    document.getElementById('detalle-paciente-dni').textContent = pacienteDni;
+    document.getElementById('detalle-fecha').textContent = fecha;
+    document.getElementById('detalle-hora').textContent = horaInicio + ' - ' + horaFin;
+    document.getElementById('detalle-profesional').textContent = profesional;
+    document.getElementById('detalle-servicio').textContent = servicio;
+    
+    const estadoSpan = document.getElementById('detalle-estado');
+    estadoSpan.textContent = estado;
+    // Aplicar clases según estado
+    estadoSpan.className = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ';
+    switch(estado) {
+        case 'PENDIENTE': estadoSpan.className += 'bg-yellow-100 text-yellow-800'; break;
+        case 'CONFIRMADO': estadoSpan.className += 'bg-blue-100 text-blue-800'; break;
+        case 'REALIZADO': estadoSpan.className += 'bg-green-100 text-green-800'; break;
+        case 'CANCELADO': estadoSpan.className += 'bg-red-100 text-red-800'; break;
+        case 'AUSENTE': estadoSpan.className += 'bg-gray-100 text-gray-800'; break;
+        default: estadoSpan.className += 'bg-gray-100 text-gray-800';
+    }
+    
+    document.getElementById('detalle-observaciones').textContent = observaciones || '(Sin observaciones)';
+    
+    // Mostrar/ocultar botones de cambio de estado
+    const accionesEstado = document.getElementById('detalle-acciones-estado');
+    const formRealizado = document.getElementById('form-estado-realizado');
+    const formCancelado = document.getElementById('form-estado-cancelado');
+    const formAusente = document.getElementById('form-estado-ausente');
+    
+    if (estado === 'PENDIENTE' || estado === 'CONFIRMADO') {
+        accionesEstado.classList.remove('hidden');
+        // Actualizar URLs de los formularios
+        formRealizado.action = `/turnos/${id}/estado/REALIZADO/`;
+        formCancelado.action = `/turnos/${id}/estado/CANCELADO/`;
+        formAusente.action = `/turnos/${id}/estado/AUSENTE/`;
+    } else {
+        accionesEstado.classList.add('hidden');
+    }
+    
+    // Actualizar URL del botón Editar
+    const btnEditar = document.getElementById('detalle-btn-editar');
+    if (btnEditar) {
+        btnEditar.href = `/turnos/editar/${id}/`;
+    }
+    
+    // Guardar referencia para edición
+    turnoEnEdicion = {
+        id: id,
+        paciente: paciente,
+        pacienteDni: pacienteDni,
+        fecha: trElement.dataset.fechaIso,
+        horaInicio: horaInicio,
+        horaFin: horaFin,
+        profesional: profesional,
+        servicio: servicio,
+        estado: estado,
+        observaciones: observaciones
+    };
+    
+    modal.showModal();
+}
+
+// Función para abrir modal de edición desde el botón "Editar" en la fila
+function abrirModalEdicion(trElement) {
+    abrirModalDetalle(trElement);
+    // Cerrar detalle y abrir edición
+    setTimeout(() => {
+        document.getElementById('modal-detalle-turno').close();
+        abrirModalEdicionDesdeDetalle();
+    }, 0);
+}
+
+// Función para abrir modal de edición desde el botón "Editar" en el modal de detalle
+function abrirModalEdicionDesdeDetalle() {
+    if (!turnoEnEdicion) return;
+    
+    // Redirigir a la vista de edición real
+    window.location.href = `{% url 'turno_update' 0 %}`.replace('0', turnoEnEdicion.id);
+}
+
+// Manejar cierre del modal de detalle al hacer clic en el backdrop
+document.addEventListener('DOMContentLoaded', function() {
+    const modalDetalle = document.getElementById('modal-detalle-turno');
+    if (modalDetalle) {
+        modalDetalle.addEventListener('click', function(e) {
+            if (e.target === modalDetalle) {
+                modalDetalle.close();
+            }
+        });
+    }
 });
 </script>
 {% endblock %}
