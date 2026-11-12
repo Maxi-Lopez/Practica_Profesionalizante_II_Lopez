@@ -350,6 +350,17 @@ class PacientesListView(LoginRequiredMixin, TemplateView):
                 context['pacientes'] = Paciente.objects.none()
         else:
             context['pacientes'] = Paciente.objects.none()
+        
+        # Aplicar filtro de búsqueda
+        search = self.request.GET.get('search', '').strip()
+        if search:
+            from django.db.models import Q
+            context['pacientes'] = context['pacientes'].filter(
+                Q(persona__nombre__icontains=search) |
+                Q(persona__apellido__icontains=search) |
+                Q(persona__dni__icontains=search)
+            )
+        
         return context
 
 
