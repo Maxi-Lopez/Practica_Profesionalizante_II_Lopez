@@ -1848,31 +1848,33 @@ class PlanesListView(LoginRequiredMixin, ListView):
     login_url = 'login'
 
     def get_queryset(self):
+        from django.db.models import Q
         user = self.request.user
         qs = PlanTratamiento.objects.filter(activo=True).select_related('paciente__persona').order_by('-fecha_inicio')
         
         # Filtrar por permisos de rol
         if user.rol in ['psicologo', 'medico', 'trabajador_social', 'kinesiologo', 
                         'psicomotricista', 'nutricionista', 'psicopedagogo', 'pedagogo', 'enfermero']:
-            # Profesional: ver planes de sus pacientes (turnos asignados O área)
-            from pacientes.models import Paciente
-            if hasattr(user, 'empleado') and user.empleado:
-                paciente_ids = Paciente.objects.filter(
-                    turnos__profesional=user.empleado
-                ).values_list('id', flat=True).distinct()
-                if paciente_ids:
-                    qs = qs.filter(paciente_id__in=paciente_ids)
-            if user.area:
-                area_qs = qs.filter(
-                    paciente__diagnosticos_area__activo=True, 
-                    paciente__diagnosticos_area__area=user.area
+            # Profesional: ver planes de sus pacientes
+            profesional = getattr(user, 'empleado', None)
+            if profesional:
+                qs = qs.filter(
+                    Q(paciente__turnos__profesional=profesional) |
+                    Q(paciente__diagnosticos_area__profesional=profesional) |
+                    Q(paciente__seguimientos_trimestrales__profesional=profesional)
                 ).distinct()
-                qs = (qs | area_qs).distinct()
+            elif user.area:
+                # Fallback a área si no tiene empleado vinculado
+                qs = qs.filter(
+                    Q(paciente__diagnosticos_area__activo=True, paciente__diagnosticos_area__area=user.area) |
+                    Q(paciente__seguimientos_trimestrales__activo=True, paciente__seguimientos_trimestrales__area=user.area)
+                ).distinct()
+            else:
+                qs = PlanTratamiento.objects.none()
         
         # Aplicar filtro de búsqueda
         search = self.request.GET.get('search', '').strip()
         if search:
-            from django.db.models import Q
             search_q = Q(nombre__icontains=search) | \
                        Q(paciente__persona__nombre__icontains=search) | \
                        Q(paciente__persona__apellido__icontains=search) | \
