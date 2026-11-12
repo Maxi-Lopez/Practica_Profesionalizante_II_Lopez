@@ -1305,33 +1305,36 @@ class AreaDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
 # ============================================================
 
 class DiagnosticosListView(LoginRequiredMixin, ListView):
-    model = DiagnosticoArea
+    model = Paciente
     template_name = 'diagnosticos/list.html'
-    context_object_name = 'diagnosticos'
+    context_object_name = 'pacientes'
     paginate_by = 20
     login_url = 'login'
 
     def get_queryset(self):
+        from django.db.models import Q
         user = self.request.user
-        qs = DiagnosticoArea.objects.filter(activo=True).select_related(
-            'paciente__persona', 'area', 'profesional__persona'
-        ).order_by('-fecha')
         
-        # Filtrar por permisos de rol (profesionales solo ven su área)
-        if user.rol in ['psicologo', 'medico', 'trabajador_social', 'kinesiologo', 
-                        'psicomotricista', 'nutricionista', 'psicopedagogo', 'pedagogo', 'enfermero']:
-            if user.area:
-                qs = qs.filter(area=user.area)
+        if user.is_superuser or user.rol in ['admin', 'orientador', 'recepcionista']:
+            qs = Paciente.objects.filter(activo=True).select_related('persona', 'obra_social').order_by('persona__apellido', 'persona__nombre')
+        elif hasattr(user, 'empleado') and user.empleado:
+            qs = Paciente.objects.filter(activo=True).filter(
+                Q(turnos__profesional=user.empleado) |
+                Q(seguimientos_trimestrales__profesional=user.empleado) |
+                Q(diagnosticos_area__profesional=user.empleado)
+            ).select_related('persona', 'obra_social').distinct().order_by('persona__apellido', 'persona__nombre')
+        else:
+            qs = Paciente.objects.none()
         
         # Aplicar filtro de búsqueda
         search = self.request.GET.get('search', '').strip()
         if search:
-            from django.db.models import Q
-            search_q = Q(diagnostico__icontains=search) | \
-                       Q(paciente__persona__nombre__icontains=search) | \
-                       Q(paciente__persona__apellido__icontains=search) | \
-                       Q(area__nombre__icontains=search)
-            qs = qs.filter(search_q)
+            qs = qs.filter(
+                Q(persona__nombre__icontains=search) |
+                Q(persona__apellido__icontains=search) |
+                Q(persona__dni__icontains=search) |
+                Q(obra_social__nombre__icontains=search)
+            )
         
         return qs
 
@@ -1368,10 +1371,18 @@ class DiagnosticoUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateV
             return ()
         return ('pacientes.change_diagnosticoarea',)
 
-    def get_object(self, queryset=None):
-        return DiagnosticoArea.objects.select_related(
+    def get_queryset(self):
+        user = self.request.user
+        qs = DiagnosticoArea.objects.select_related(
             'paciente__persona', 'area', 'profesional__persona'
-        ).get(pk=self.kwargs['pk'])
+        )
+        if user.is_superuser or user.rol in ['admin', 'orientador', 'recepcionista']:
+            return qs
+        if hasattr(user, 'empleado') and user.empleado:
+            return qs.filter(profesional=user.empleado)
+        if hasattr(user, 'area') and user.area:
+            return qs.filter(area=user.area)
+        return qs.none()
 
     def form_valid(self, form):
         messages.success(self.request, 'Diagnóstico actualizado exitosamente.')
@@ -1390,10 +1401,18 @@ class DiagnosticoDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteV
             return ()
         return ('pacientes.delete_diagnosticoarea',)
 
-    def get_object(self, queryset=None):
-        return DiagnosticoArea.objects.select_related(
+    def get_queryset(self):
+        user = self.request.user
+        qs = DiagnosticoArea.objects.select_related(
             'paciente__persona', 'area', 'profesional__persona'
-        ).get(pk=self.kwargs['pk'])
+        )
+        if user.is_superuser or user.rol in ['admin', 'orientador', 'recepcionista']:
+            return qs
+        if hasattr(user, 'empleado') and user.empleado:
+            return qs.filter(profesional=user.empleado)
+        if hasattr(user, 'area') and user.area:
+            return qs.filter(area=user.area)
+        return qs.none()
 
     def form_valid(self, form):
         self.object = self.get_object()
