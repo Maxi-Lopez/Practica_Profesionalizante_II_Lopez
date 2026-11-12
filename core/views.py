@@ -64,6 +64,16 @@ class HomeView(TemplateView):
                 context['tratamientos_count'] = PlanTratamiento.objects.filter(activo=True).count()
                 context['empleados_count'] = Empleado.objects.filter(activo=True).count()
                 context['es_admin'] = True
+                # Alertas CUD
+                context['cud_por_vencer'] = Paciente.objects.filter(
+                    activo=True,
+                    fecha_vencimiento_cud__gte=hoy,
+                    fecha_vencimiento_cud__lte=hoy + timedelta(days=30)
+                ).count()
+                context['cud_vencidos'] = Paciente.objects.filter(
+                    activo=True,
+                    fecha_vencimiento_cud__lt=hoy
+                ).count()
             elif user.rol in ['recepcionista']:
                 # Recepcionista ve todo (gestión de turnos y pacientes)
                 context['pacientes_count'] = Paciente.objects.filter(activo=True).count()
@@ -73,6 +83,16 @@ class HomeView(TemplateView):
                 context['tratamientos_count'] = PlanTratamiento.objects.filter(activo=True).count()
                 context['empleados_count'] = Empleado.objects.filter(activo=True).count()
                 context['es_admin'] = False
+                # Alertas CUD
+                context['cud_por_vencer'] = Paciente.objects.filter(
+                    activo=True,
+                    fecha_vencimiento_cud__gte=hoy,
+                    fecha_vencimiento_cud__lte=hoy + timedelta(days=30)
+                ).count()
+                context['cud_vencidos'] = Paciente.objects.filter(
+                    activo=True,
+                    fecha_vencimiento_cud__lt=hoy
+                ).count()
             elif user.rol in ['psicologo', 'medico', 'trabajador_social', 'kinesiologo', 'psicomotricista', 'nutricionista', 'psicopedagogo', 'pedagogo', 'enfermero']:
                 # Profesionales ven sus pacientes/turnos/tratamientos basados en su empleado vinculado y/o área
                 profesional = getattr(user, 'empleado', None)
@@ -131,12 +151,16 @@ class HomeView(TemplateView):
                 
                 context['es_admin'] = False
                 context['es_profesional'] = True
+                context['cud_por_vencer'] = 0
+                context['cud_vencidos'] = 0
             else:
                 context['pacientes_count'] = 0
                 context['turnos_hoy_count'] = 0
                 context['tratamientos_count'] = 0
                 context['empleados_count'] = 0
                 context['es_admin'] = False
+                context['cud_por_vencer'] = 0
+                context['cud_vencidos'] = 0
         return context
 
 
@@ -425,6 +449,9 @@ class PacientesListView(LoginRequiredMixin, TemplateView):
                 Q(persona__apellido__icontains=search) |
                 Q(persona__dni__icontains=search)
             )
+        
+        from django.utils import timezone
+        context['today'] = timezone.now().date()
         
         return context
 
