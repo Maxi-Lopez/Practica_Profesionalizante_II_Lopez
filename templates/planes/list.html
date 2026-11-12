@@ -48,58 +48,101 @@
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha Inicio</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha Fin</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-200">
-                        {% for plan in planes %}
-                            <tr class="hover:bg-gray-50 cursor-pointer" data-id="{{ plan.pk }}">
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ plan.paciente.persona.nombre }} {{ plan.paciente.persona.apellido }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ plan.nombre }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ plan.fecha_inicio|date:"d/m/Y" }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ plan.fecha_fin|date:"d/m/Y"|default:"—" }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    {% if plan.activo %}
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Activo</span>
-                                    {% else %}
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">Inactivo</span>
-                                    {% endif %}
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                    {% if perms.tratamientos.change_plantratamiento and plan.activo %}
-                                    <a href="{% url 'plan_update' plan.pk %}" class="text-primary-600 hover:text-primary-900 mr-3">Editar</a>
-                                    {% endif %}
-                                    {% if perms.tratamientos.delete_plantratamiento and plan.activo %}
-                                    <form action="{% url 'plan_delete' plan.pk %}" method="post" class="inline" onsubmit="return confirm('¿Está seguro de que desea dar de baja a este plan de tratamiento?');">
-                                        {% csrf_token %}
-                                        <button type="submit" class="text-red-600 hover:text-red-900">Eliminar</button>
-                                    </form>
-                                    {% endif %}
-                                </td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        {% else %}
-            <div class="p-12 text-center">
-                <svg class="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
-                </svg>
-                <h3 class="text-lg font-medium text-gray-900 mb-1">No hay planes de tratamiento registrados</h3>
-                <p class="text-gray-500 mb-4">Comienza creando tu primer plan de tratamiento.</p>
-                {% if perms.tratamientos.add_plantratamiento %}
-                <a href="{% url 'plan_create' %}" class="bg-primary-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-700 transition-colors inline-flex items-center">
-                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                            {% for plan in planes %}
+                                <tr class="hover:bg-gray-50 cursor-pointer"
+                                    data-plan-id="{{ plan.pk }}"
+                                    data-nombre="{{ plan.nombre }}"
+                                    data-paciente="{{ plan.paciente.persona.apellido }}, {{ plan.paciente.persona.nombre }}"
+                                    data-fecha-inicio="{{ plan.fecha_inicio|date:'d/m/Y'|default:'Sin fecha' }}"
+                                    data-fecha-fin="{{ plan.fecha_fin|date:'d/m/Y'|default:'Sin fecha' }}"
+                                    data-descripcion="{{ plan.descripcion|default:'' }}"
+                                    data-observaciones="{{ plan.observaciones|default:'' }}">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ plan.paciente.persona.nombre }} {{ plan.paciente.persona.apellido }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ plan.nombre }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ plan.fecha_inicio|date:"d/m/Y" }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ plan.fecha_fin|date:"d/m/Y"|default:"Sin fecha" }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        {% if plan.activo %}
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Activo</span>
+                                        {% else %}
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">Inactivo</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="p-12 text-center">
+                    <svg class="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
                     </svg>
-                    Crear el primero
-                </a>
-                {% endif %}
-            </div>
-        {% endif %}
+                    <h3 class="text-lg font-medium text-gray-900 mb-1">No hay planes de tratamiento registrados</h3>
+                    <p class="text-gray-500 mb-4">Comienza creando tu primer plan de tratamiento.</p>
+                    {% if perms.tratamientos.add_plantratamiento %}
+                    <a href="{% url 'plan_create' %}" class="bg-primary-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-700 transition-colors inline-flex items-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                        </svg>
+                        Crear el primero
+                    </a>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
     </div>
 </div>
+
+<!-- Modal de Detalle de Plan -->
+<dialog id="modal-detalle-plan" class="p-0 rounded-lg shadow-xl backdrop:bg-black/50 w-full max-w-lg">
+    <div class="bg-white p-6 rounded-lg relative">
+        <button type="button" onclick="document.getElementById('modal-detalle-plan').close()" class="absolute top-4 right-4 text-gray-500 hover:text-gray-700 text-2xl leading-none">&times;</button>
+        
+        <h2 class="text-xl font-bold mb-4">Detalle del Plan</h2>
+        
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-500 mb-1">Nombre</label>
+                <span id="detalle-nombre" class="text-sm text-gray-900"></span>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-500 mb-1">Paciente</label>
+                <span id="detalle-paciente" class="text-sm text-gray-900"></span>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-500 mb-1">Fecha Inicio</label>
+                    <span id="detalle-fecha-inicio" class="text-sm text-gray-900"></span>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-500 mb-1">Fecha Fin</label>
+                    <span id="detalle-fecha-fin" class="text-sm text-gray-900"></span>
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-500 mb-1">Descripción</label>
+                <p id="detalle-descripcion" class="text-sm text-gray-900 whitespace-pre-wrap"></p>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-500 mb-1">Observaciones</label>
+                <p id="detalle-observaciones" class="text-sm text-gray-900 whitespace-pre-wrap"></p>
+            </div>
+        </div>
+        
+        <div class="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-200">
+            <button type="button" onclick="document.getElementById('modal-detalle-plan').close()" class="px-4 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                Cerrar
+            </button>
+            <a href="#" id="btn-editar-plan" class="px-4 py-2 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-colors">
+                Editar Plan
+            </a>
+        </div>
+    </div>
+</dialog>
+
 {% endblock %}
 
 {% block extra_scripts %}
@@ -107,8 +150,16 @@
 document.addEventListener('DOMContentLoaded', function() {
     const input = document.getElementById('search-input-planes');
     const container = document.getElementById('tabla-planes-container');
+    const form = document.getElementById('search-form-planes');
 
     if (!input || !container) return;
+
+    // Prevenir envío del formulario
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+        });
+    }
 
     let timeout = null;
 
@@ -148,5 +199,30 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 300);
     });
 });
+
+// Función para abrir el modal de detalle
+function abrirModalDetallePlan(tr) {
+    document.getElementById('detalle-nombre').textContent = tr.dataset.nombre;
+    document.getElementById('detalle-paciente').textContent = tr.dataset.paciente;
+    document.getElementById('detalle-fecha-inicio').textContent = tr.dataset.fechaInicio;
+    document.getElementById('detalle-fecha-fin').textContent = tr.dataset.fechaFin;
+    document.getElementById('detalle-descripcion').textContent = tr.dataset.descripcion || '(Sin descripción)';
+    document.getElementById('detalle-observaciones').textContent = tr.dataset.observaciones || '(Sin observaciones)';
+    
+    document.getElementById('btn-editar-plan').href = `/planes/editar/${tr.dataset.planId}/`;
+    
+    document.getElementById('modal-detalle-plan').showModal();
+}
+
+// EVENT DELEGATION: Escuchar clics en el contenedor (sobrevive al live search)
+const container = document.getElementById('tabla-planes-container');
+if (container) {
+    container.addEventListener('click', function(e) {
+        const tr = e.target.closest('tr[data-plan-id]');
+        if (tr) {
+            abrirModalDetallePlan(tr);
+        }
+    });
+}
 </script>
 {% endblock %}
