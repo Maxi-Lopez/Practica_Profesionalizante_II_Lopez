@@ -783,57 +783,6 @@ def cambiar_estado_turno(request, pk, nuevo_estado):
     return redirect('turnos_list')
 
 
-class TratamientosListView(LoginRequiredMixin, TemplateView):
-    template_name = 'tratamientos/list.html'
-    login_url = 'login'
-    
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        from tratamientos.models import PlanTratamiento
-        user = self.request.user
-        
-        base_qs = PlanTratamiento.objects.select_related('paciente__persona').filter(activo=True).order_by('-fecha_inicio')
-        
-        if user.is_superuser or user.rol in ['admin', 'orientador', 'recepcionista']:
-            context['tratamientos'] = base_qs
-        elif user.rol in ['psicologo', 'medico', 'trabajador_social', 'kinesiologo', 'psicomotricista', 'nutricionista', 'psicopedagogo', 'pedagogo', 'enfermero']:
-            # Profesional: ver planes de sus pacientes (turnos asignados O área)
-            profesional_qs = PlanTratamiento.objects.none()
-            if user.email:
-                from personas.models import Email
-                empleado_personas = Email.objects.filter(
-                    direccion_email=user.email, activo=True
-                ).values_list('persona_id', flat=True)
-                if empleado_personas:
-                    # Pacientes con turnos asignados a este profesional
-                    paciente_ids = Paciente.objects.filter(
-                        turnos__profesional__persona_id__in=empleado_personas
-                    ).values_list('id', flat=True).distinct()
-                    if paciente_ids:
-                        profesional_qs = base_qs.filter(paciente_id__in=paciente_ids)
-            
-            # También incluir planes de pacientes en su área
-            area_qs = PlanTratamiento.objects.none()
-            if user.area:
-                area_qs = base_qs.filter(
-                    models.Q(paciente__diagnosticos_area__activo=True, paciente__diagnosticos_area__area=user.area) |
-                    models.Q(paciente__seguimientos_trimestrales__activo=True, paciente__seguimientos_trimestrales__area=user.area)
-                ).distinct()
-            
-            # Unir ambos
-            if profesional_qs and area_qs:
-                context['tratamientos'] = (profesional_qs | area_qs).distinct()
-            elif profesional_qs:
-                context['tratamientos'] = profesional_qs
-            elif area_qs:
-                context['tratamientos'] = area_qs
-            else:
-                context['tratamientos'] = PlanTratamiento.objects.none()
-        else:
-            context['tratamientos'] = PlanTratamiento.objects.none()
-        return context
-
-
 class EmpleadosListView(SoloAdminMixin, LoginRequiredMixin, TemplateView):
     template_name = 'empleados/list.html'
     login_url = 'login'

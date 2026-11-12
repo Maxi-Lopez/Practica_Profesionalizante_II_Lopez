@@ -106,11 +106,11 @@
                     </svg>
                     <p class="font-medium text-gray-900">Turnos</p>
                 </a>
-                <a href="{% url 'tratamientos_list' %}" class="p-4 border border-gray-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors text-center">
+                <a href="{% url 'planes_list' %}" class="p-4 border border-gray-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors text-center">
                     <svg class="w-10 h-10 mx-auto text-green-600 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                     </svg>
-                    <p class="font-medium text-gray-900">Tratamientos</p>
+                    <p class="font-medium text-gray-900">Planes</p>
                 </a>
                 {% if user.is_superuser or user.rol == 'admin' %}
                 <a href="{% url 'usuarios_list' %}" class="p-4 border border-gray-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors text-center">
