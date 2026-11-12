@@ -88,6 +88,29 @@
                 </div>
             </div>
 
+            <!-- CUD Alert Banner -->
+            {% if cud_por_vencer > 0 or cud_vencidos > 0 %}
+            <div class="bg-gradient-to-r from-amber-500 to-orange-600 rounded-xl p-6 mb-6 text-white shadow-lg">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div class="flex items-center gap-3">
+                        <svg class="w-8 h-8 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                            <path fill-rule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zM12.75 9a.75.75 0 00-1.5 0v2.25H9a.75.75 0 000 1.5h2.25V15a.75.75 0 001.5 0v-2.25H15a.75.75 0 000-1.5H12.75V9z" clip-rule="evenodd" />
+                        </svg>
+                        <div>
+                            <p class="text-lg font-semibold">Atención: Vencimientos de CUD</p>
+                            <p class="text-amber-100 text-sm">
+                                {% if cud_vencidos > 0 %}{{ cud_vencidos }} concurrente{{ cud_vencidos|pluralize }} con CUD vencido{% if cud_por_vencer > 0 %} y {% endif %}{% endif %}
+                                {% if cud_por_vencer > 0 %}{{ cud_por_vencer }} concurrente{{ cud_por_vencer|pluralize }} por vencer en 30 días{% endif %}.
+                            </p>
+                        </div>
+                    </div>
+                    <a href="{% url 'pacientes_list' %}?cud=alert" class="flex-shrink-0 bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap">
+                        Ver listado
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+
             <!-- Quick Actions (Admin) -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-100">
                 <div class="p-6 border-b border-gray-100">

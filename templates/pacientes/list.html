@@ -47,6 +47,7 @@
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">DNI</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Obra Social</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CUD</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Teléfono</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha Ingreso</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
@@ -73,6 +74,40 @@
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ paciente.persona.dni }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ paciente.obra_social.nombre|default:"—" }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ paciente.persona.telefonos.first.numero|default:"—" }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ paciente.fecha_ingreso|date:"d/m/Y"|default:"—" }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    {% if paciente.fecha_vencimiento_cud %}
+                                        {% if paciente.fecha_vencimiento_cud < today %}
+                                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                                <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 24 24">
+                                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l3 3a1 1 0 001.414-1.414l-1.586-1.586a1 1 0 00-.293-.707V9z" clip-rule="evenodd" />
+                                                </svg>
+                                                Vencido
+                                            </span>
+                                        {% elif paciente.fecha_vencimiento_cud <= today|add_days:30 %}
+                                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                                                <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 24 24">
+                                                    <path fill-rule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zM12.75 9a.75.75 0 00-1.5 0v2.25H9a.75.75 0 000 1.5h2.25V15a.75.75 0 001.5 0v-2.25H15a.75.75 0 000-1.5H12.75V9z" clip-rule="evenodd" />
+                                                </svg>
+                                                {{ paciente.fecha_vencimiento_cud|date:"d/m/Y" }}
+                                            </span>
+                                        {% else %}
+                                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 24 24">
+                                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l3 3a1 1 0 001.414-1.414l-1.586-1.586a1 1 0 00-.293-.707V9z" clip-rule="evenodd" />
+                                                </svg>
+                                                {{ paciente.fecha_vencimiento_cud|date:"d/m/Y" }}
+                                            </span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                                            <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 24 24">
+                                                <path fill-rule="evenodd" d="M13.477 14.89a.75.75 0 00-1.06 0l-2.25 2.25a.75.75 0 01-1.06-1.06l2-2a.75.75 0 00-1.06-1.06l-2 2a.75.75 0 11-1.06-1.06l2.25-2.25a.75.75 0 111.06 1.06l2 2a.75.75 0 111.06 1.06l-2 2a.75.75 0 111.06 1.06l2.25 2.25a.75.75 0 001.06 0l2.25-2.25a.75.75 0 011.06-1.06l-2-2a.75.75 0 001.06-1.06l2-2a.75.75 0 111.06 1.06l2 2a.75.75 0 111.06 1.06l-2.25 2.25a.75.75 0 001.06 0z" clip-rule="evenodd" />
+                                            </svg>
+                                            Sin CUD
+                                        </span>
+                                    {% endif %}
+                                </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ paciente.fecha_ingreso|date:"d/m/Y"|default:"—" }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     {% if paciente.activo %}
