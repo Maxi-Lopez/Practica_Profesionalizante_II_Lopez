@@ -22,24 +22,24 @@
     </div>
 
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6">
-        <form method="get" id="search-form" class="relative">
-            <label for="search-input" class="sr-only">Buscar turnos</label>
+        <form method="get" id="search-form-turnos" onsubmit="return false;" class="relative">
+            <label for="search-input-turnos" class="sr-only">Buscar turnos</label>
             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                 </svg>
             </div>
-            <input type="text" 
-                   name="search" 
-                   id="search-input"
-                   value="{{ request.GET.search }}" 
+            <input type="text"
+                   name="search"
+                   id="search-input-turnos"
+                   value="{{ request.GET.search }}"
                    placeholder="Buscar por concurrente, profesional, servicio..." 
                    class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 focus:outline-none transition-colors"
                    autocomplete="off">
         </form>
     </div>
 
-<div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden" id="turnos-container">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden" id="tabla-turnos-container">
         {% if turnos %}
             <div class="overflow-x-auto">
                 <table class="w-full">
@@ -92,7 +92,6 @@
                                     {% endif %}
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                    <a href="{% url 'turno_update' turno.pk %}" onclick="event.stopPropagation()" class="text-gray-600 hover:text-gray-900">Editar</a>
                                 </td>
                             </tr>
                         {% endfor %}
@@ -107,7 +106,7 @@
                 <h3 class="text-lg font-medium text-gray-900 mb-1">No hay turnos programados</h3>
                 <p class="text-gray-500 mb-4">Comienza agendando tu primer turno.</p>
             </div>
-{% endif %}
+        {% endif %}
     </div>
 </div>
 
@@ -162,8 +161,7 @@
                 <label for="id_fecha" class="block text-sm font-medium text-gray-700 mb-1">Fecha *</label>
                 <input type="date" name="fecha" id="id_fecha" required 
                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
-                       value="{{ today }}"
-                       min="{{ today|date:"Y-m-d" }}">
+                       value="{{ today }}">
                 {% if form.fecha.errors %}
                     <p class="mt-1 text-sm text-red-600">{{ form.fecha.errors.0 }}</p>
                 {% endif %}
@@ -183,11 +181,11 @@
             </div>
         </div>
         
-        {% if user.is_superuser or user.rol in 'admin,recepcionista,orientador' %}
+        {% if user.is_superuser or user.rol == 'admin' or user.rol == 'recepcionista' or user.rol == 'orientador' %}
+        <!-- ADMIN: Select normal -->
         <div class="mb-4">
-            <label for="id_profesional" class="block text-sm font-medium text-gray-700 mb-1">Profesional *</label>
-            <select name="profesional_id" id="id_profesional" required 
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors">
+            <label for="profesional_id" class="block text-sm font-medium text-gray-700 mb-1">Profesional *</label>
+            <select name="profesional_id" id="profesional_id" class="w-full px-3 py-2 border rounded-lg" required>
                 <option value="">Seleccionar profesional...</option>
                 {% for prof in profesionales %}
                     <option value="{{ prof.id }}">{{ prof.persona.apellido }}, {{ prof.persona.nombre }}</option>
@@ -243,7 +241,6 @@
         
         <!-- Disponibilidad / Conflicto -->
         <div id="availability-error" class="hidden text-red-600 text-sm mb-4"></div>
-        <div id="past-error" class="hidden text-red-600 text-sm mb-4"></div>
         
         <div>
             <label for="id_observaciones" class="block text-sm font-medium text-gray-700 mb-1">Observaciones (opcional)</label>
@@ -252,7 +249,6 @@
         </div>
         
         <input type="hidden" name="action" value="crear_turno">
-        <input type="hidden" name="turno_id" value="">
         
         <div class="flex justify-end gap-2 mt-6">
             <button type="button" onclick="document.getElementById('modal-turno').close()" class="px-4 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition-colors">
@@ -274,16 +270,8 @@
         
         <div class="space-y-4">
             <div>
-                <label class="block text-sm font-medium text-gray-500 mb-1">ID</label>
-                <span id="detalle-id" class="text-sm text-gray-900 font-mono"></span>
-            </div>
-            <div>
                 <label class="block text-sm font-medium text-gray-500 mb-1">Concurrente</label>
                 <span id="detalle-paciente" class="text-sm text-gray-900"></span>
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-500 mb-1">DNI Concurrente</label>
-                <span id="detalle-paciente-dni" class="text-sm text-gray-900"></span>
             </div>
             <div class="grid grid-cols-2 gap-4">
                 <div>
@@ -313,33 +301,11 @@
             </div>
         </div>
         
-        <!-- Botones de cambio de estado (solo si el turno está pendiente o confirmado) -->
-        <div id="detalle-acciones-estado" class="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-200 hidden">
-            <form method="post" id="form-estado-realizado" class="inline">
-                {% csrf_token %}
-                <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors">
-                    Marcar como Realizado
-                </button>
-            </form>
-            <form method="post" id="form-estado-cancelado" class="inline">
-                {% csrf_token %}
-                <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors">
-                    Cancelar Turno
-                </button>
-            </form>
-            <form method="post" id="form-estado-ausente" class="inline">
-                {% csrf_token %}
-                <button type="submit" class="px-4 py-2 bg-gray-600 text-white rounded-lg font-medium hover:bg-gray-700 transition-colors">
-                    Marcar como Ausente
-                </button>
-            </form>
-        </div>
-        
         <div class="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-200">
             <button type="button" onclick="document.getElementById('modal-detalle-turno').close()" class="px-4 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition-colors">
                 Cerrar
             </button>
-            <a href="#" id="detalle-btn-editar" onclick="event.preventDefault(); abrirModalEdicionDesdeDetalle()" class="px-4 py-2 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-colors inline-flex items-center">
+            <a href="#" id="btn-editar-turno" class="px-4 py-2 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-colors">
                 Editar Turno
             </a>
         </div>
@@ -464,12 +430,14 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-
+    
     // Escuchar cambios en los inputs
     [fechaInput, horaInicioInput, horaFinInput].forEach(input => {
         if (input) {
             input.addEventListener('change', checkDisponibilidad);
             input.addEventListener('blur', checkDisponibilidad);
+            input.addEventListener('change', checkNotPast);
+            input.addEventListener('blur', checkNotPast);
         }
     });
     
@@ -500,14 +468,6 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
     });
-    
-    // También validar al cambiar fecha/hora
-    [fechaInput, horaInicioInput].forEach(input => {
-        if (input) {
-            input.addEventListener('change', checkNotPast);
-            input.addEventListener('blur', checkNotPast);
-        }
-    });
 });
 
 // Variable global para guardar el turno actual en edición
@@ -519,7 +479,7 @@ function abrirModalDetalle(trElement) {
     if (!modal) return;
     
     // Leer data-* attributes
-    const id = trElement.dataset.id;
+    const id = trElement.dataset.turnoId;
     const paciente = trElement.dataset.paciente;
     const pacienteDni = trElement.dataset.pacienteDni;
     const fecha = trElement.dataset.fecha;
@@ -608,7 +568,7 @@ function abrirModalEdicionDesdeDetalle() {
     if (!turnoEnEdicion) return;
     
     // Redirigir a la vista de edición real
-    window.location.href = `{% url 'turno_update' 0 %}`.replace('0', turnoEnEdicion.id);
+    window.location.href = `/turnos/editar/${turnoEnEdicion.id}/`;
 }
 
 // Manejar cierre del modal de detalle al hacer clic en el backdrop
@@ -622,67 +582,93 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+</script>
+{% endblock %}
 
-// Live Search para Turnos (con Event Delegation)
-(function() {
-    const searchInput = document.getElementById('search-input');
-    const form = document.getElementById('search-form');
-    const container = document.getElementById('turnos-container');
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const input = document.getElementById('search-input-turnos');
+    const container = document.getElementById('tabla-turnos-container');
+
+    if (!input || !container) return;
+
     let timeout = null;
 
-    // Prevenir recarga de página si se presiona Enter
-    if (form) {
-        form.addEventListener('submit', function(e) {
-            e.preventDefault();
-        });
-    }
+    input.addEventListener('input', function() {
+        clearTimeout(timeout);
+        const query = this.value.trim();
 
-    if (searchInput && container) {
-        searchInput.addEventListener('input', function() {
-            clearTimeout(timeout);
-            const query = this.value;
+        timeout = setTimeout(function() {
+            const url = new URL(window.location.href);
+            if (query) {
+                url.searchParams.set('search', query);
+            } else {
+                url.searchParams.delete('search');
+            }
 
-            // Efecto de carga (opacidad)
             container.style.opacity = '0.5';
 
-            timeout = setTimeout(() => {
-                const url = new URL(window.location.href);
-                if (query) {
-                    url.searchParams.set('search', query);
-                } else {
-                    url.searchParams.delete('search');
+            fetch(url, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(response => response.text())
+            .then(html => {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const newContainer = doc.getElementById('tabla-turnos-container');
+
+                if (newContainer) {
+                    container.innerHTML = newContainer.innerHTML;
+                    window.history.replaceState({}, '', url);
                 }
+                container.style.opacity = '1';
+            })
+            .catch(error => {
+                console.error('Error en la busqueda:', error);
+                container.style.opacity = '1';
+            });
+        }, 300);
+    });
+});
 
-                fetch(url, {
-                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                })
-                .then(response => response.text())
-                .then(html => {
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(html, 'text/html');
-                    const newContainer = doc.getElementById('turnos-container');
-                    
-                    if (newContainer) {
-                        container.innerHTML = newContainer.innerHTML;
-                        // Restaurar opacidad
-                        container.style.opacity = '1';
-                    }
-                })
-                .catch(err => {
-                    console.error("Error en búsqueda en vivo:", err);
-                    container.style.opacity = '1';
-                });
-            }, 300); // 300ms debounce
-        });
+// Función para abrir el modal de detalle
+function abrirModalDetalle(tr) {
+    document.getElementById('detalle-paciente').textContent = tr.dataset.paciente;
+    document.getElementById('detalle-fecha').textContent = tr.dataset.fecha;
+    document.getElementById('detalle-hora').textContent = tr.dataset.hora;
+    document.getElementById('detalle-profesional').textContent = tr.dataset.profesional;
+    document.getElementById('detalle-servicio').textContent = tr.dataset.servicio;
+    document.getElementById('detalle-observaciones').textContent = tr.dataset.observaciones || '(Sin observaciones)';
+    
+    const estadoSpan = document.getElementById('detalle-estado');
+    estadoSpan.textContent = tr.dataset.estado;
+    
+    // Aplicar colores según estado
+    estadoSpan.className = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ';
+    switch(tr.dataset.estado) {
+        case 'PENDIENTE': estadoSpan.className += 'bg-yellow-100 text-yellow-800'; break;
+        case 'CONFIRMADO': estadoSpan.className += 'bg-blue-100 text-blue-800'; break;
+        case 'REALIZADO': estadoSpan.className += 'bg-green-100 text-green-800'; break;
+        case 'CANCELADO': estadoSpan.className += 'bg-red-100 text-red-800'; break;
+        case 'AUSENTE': estadoSpan.className += 'bg-gray-100 text-gray-800'; break;
+        default: estadoSpan.className += 'bg-gray-100 text-gray-800';
     }
+    
+    document.getElementById('btn-editar-turno').href = `/turnos/editar/${tr.dataset.turnoId}/`;
+    
+    document.getElementById('modal-detalle-turno').showModal();
+}
 
-    // Event Delegation para abrir modal de detalle
-    document.addEventListener('click', function(e) {
+// EVENT DELEGATION: Escuchar clics en el contenedor (sobrevive al live search)
+const container = document.getElementById('tabla-turnos-container');
+if (container) {
+    container.addEventListener('click', function(e) {
         const tr = e.target.closest('tr[data-turno-id]');
-        if (tr && container && container.contains(tr)) {
+        if (tr) {
             abrirModalDetalle(tr);
         }
     });
-})();
+}
 </script>
 {% endblock %}
