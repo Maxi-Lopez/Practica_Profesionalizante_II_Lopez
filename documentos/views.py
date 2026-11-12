@@ -7,7 +7,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 
 from .models import Documento
 from .serializers import DocumentoSerializer, DocumentoListSerializer
-from personas.permissions import EsAdmin, EsProfesional
+from core.permissions import EsAdminProfesionalRecepcionista
 
 
 class BaseViewSet(viewsets.ModelViewSet):
@@ -18,7 +18,7 @@ class BaseViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.request.method == 'GET':
             return [AllowAny()]
-        return [EsAdmin() | EsProfesional()]
+        return [EsAdminProfesionalRecepcionista()]
 
     @action(detail=True, methods=['post'])
     def eliminado_logico(self, request, pk=None):

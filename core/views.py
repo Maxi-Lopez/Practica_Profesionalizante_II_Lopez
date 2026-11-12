@@ -8,6 +8,7 @@ from django.urls import reverse_lazy
 from django.utils import timezone
 from datetime import timedelta
 from django.core.exceptions import PermissionDenied
+from django.http import JsonResponse
 
 from usuarios.models import Usuario
 from usuarios.forms import UsuarioAdminForm
@@ -15,6 +16,11 @@ from core.forms import PacienteForm, EmpleadoForm, DocumentoForm, SalaForm, Area
 from pacientes.models import Sala, AreaInterdisciplinaria, DiagnosticoArea, SeguimientoTrimestral, Paciente
 from compras.models import Proveedor, Compra, TipoGasto, Gasto
 from tratamientos.models import PlanTratamiento, ObjetivoTratamiento, ActividadPlan, HistorialMedico, EvolucionSemanal, RegistroActividad, NotaImportante
+
+
+def health_check(request):
+    """Health check endpoint para Render/Load Balancers."""
+    return JsonResponse({'status': 'ok', 'service': 'centro-salud-api'})
 
 
 class SoloAdminMixin:

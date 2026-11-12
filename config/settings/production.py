@@ -12,10 +12,10 @@ DEBUG = False
 # SECRET_KEY obligatoria en producción, sin fallback
 SECRET_KEY = os.environ['SECRET_KEY']
 
-# ALLOWED_HOSTS desde variable de entorno (separados por coma)
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '').split(',')
+# ALLOWED_HOSTS desde variable de entorno (separados por coma, filtrando vacíos)
+ALLOWED_HOSTS = [h for h in os.environ.get('ALLOWED_HOSTS', '').split(',') if h]
 
-# CSRF trusted origins
+# CSRF trusted origins (filtrando vacíos)
 CSRF_TRUSTED_ORIGINS = [o for o in os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(',') if o]
 
 # Seguridad HTTPS
@@ -33,7 +33,7 @@ X_FRAME_OPTIONS = 'DENY'
 MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# Base de datos desde DATABASE_URL (Supabase/PostgreSQL)
+# Base de datos desde DATABASE_URL (Supabase/PostgreSQL con connection pooling)
 DATABASES = {
     'default': dj_database_url.config(
         default=os.environ['DATABASE_URL'],
@@ -42,10 +42,11 @@ DATABASES = {
     )
 }
 
-# Email en producción (configurar según proveedor)
-# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-# EMAIL_HOST = os.environ.get('EMAIL_HOST')
-# EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
-# EMAIL_USE_TLS = True
-# EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
-# EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
+# Email en producción (SMTP - configurar según proveedor: Gmail, SendGrid, Mailgun, etc.)
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
