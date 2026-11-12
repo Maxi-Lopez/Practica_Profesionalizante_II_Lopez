@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if object %}Editar{% else %}Agendar{% endif %} Turno - Centro de Día Proyectar{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <div class="mb-6">
+        <h1 class="text-2xl font-bold text-gray-900">{% if object %}Editar{% else %}Agendar{% endif %} Turno</h1>
+        <p class="text-gray-600 mt-1">{% if object %}Modifica los datos del turno{% else %}Completa la información para agendar un nuevo turno{% endif %}</p>
+    </div>
+
+    {% if messages %}
+        <div class="space-y-2 mb-6">
+            {% for message in messages %}
+                <div class="p-3 rounded-lg {% if message.tags == 'error' %}bg-red-50 text-red-700{% elif message.tags == 'success' %}bg-green-50 text-green-700{% else %}bg-blue-50 text-blue-700{% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <form method="post" class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 space-y-6">
+        {% csrf_token %}
+        
+        {% if form.non_field_errors %}
+            <div class="p-3 rounded-lg bg-red-50 text-red-700 text-sm">
+                {% for error in form.non_field_errors %}
+                    {{ error }}
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <label for="{{ form.paciente.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Concurrente *</label>
+                {{ form.paciente }}
+                {% if form.paciente.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.paciente.errors.0 }}</p>
+                {% endif %}
+            </div>
+            
+            <div>
+                <label for="{{ form.profesional.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Profesional *</label>
+                {{ form.profesional }}
+                {% if form.profesional.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.profesional.errors.0 }}</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <label for="{{ form.servicio.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Servicio / Motivo *</label>
+                {{ form.servicio }}
+                {% if form.servicio.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.servicio.errors.0 }}</p>
+                {% endif %}
+            </div>
+            
+            <div>
+                <label for="{{ form.estado.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Estado</label>
+                {{ form.estado }}
+                {% if form.estado.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.estado.errors.0 }}</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+                <label for="{{ form.fecha.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Fecha *</label>
+                {{ form.fecha }}
+                {% if form.fecha.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.fecha.errors.0 }}</p>
+                {% endif %}
+            </div>
+            
+            <div>
+                <label for="{{ form.hora_inicio.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Hora de Inicio *</label>
+                {{ form.hora_inicio }}
+                {% if form.hora_inicio.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.hora_inicio.errors.0 }}</p>
+                {% endif %}
+            </div>
+            
+            <div>
+                <label for="{{ form.hora_fin.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Hora de Fin *</label>
+                {{ form.hora_fin }}
+                {% if form.hora_fin.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.hora_fin.errors.0 }}</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div>
+            <label for="{{ form.observaciones.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Observaciones (opcional)</label>
+            {{ form.observaciones }}
+            {% if form.observaciones.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.observaciones.errors.0 }}</p>
+            {% endif %}
+        </div>
+
+        <div class="flex justify-end gap-3 pt-4 border-t border-gray-200">
+            <a href="{% url 'turnos_list' %}" class="px-4 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                Cancelar
+            </a>
+            <button type="submit" class="px-4 py-2 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-colors">
+                {% if object %}Actualizar{% else %}Agendar{% endif %} Turno
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

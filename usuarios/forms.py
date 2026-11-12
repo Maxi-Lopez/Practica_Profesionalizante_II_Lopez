@@ -1,7 +1,9 @@
 from django import forms
 from django.contrib.auth import get_user_model
+from django.db import models
 from pacientes.models import AreaInterdisciplinaria
 from usuarios.models import RolUsuario
+from empleados.models import Empleado
 
 Usuario = get_user_model()
 
@@ -59,6 +61,24 @@ class UsuarioAdminForm(forms.ModelForm):
         self.fields['area'].required = False
         self.fields['area'].empty_label = "— Sin área —"
         self.fields['rol'].choices = RolUsuario.choices
+        
+        # Empleado field: solo empleados activos sin usuario asignado (o el actual)
+        if self.instance and self.instance.pk and hasattr(self.instance, 'empleado') and self.instance.empleado:
+            self.fields['empleado'] = forms.ModelChoiceField(
+                queryset=Empleado.objects.filter(activo=True).filter(
+                    models.Q(usuario__isnull=True) | models.Q(usuario=self.instance)
+                ).select_related('persona').order_by('persona__apellido', 'persona__nombre'),
+                required=False,
+                empty_label="— Sin empleado vinculado —",
+                widget=forms.Select(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'}),
+            )
+        else:
+            self.fields['empleado'] = forms.ModelChoiceField(
+                queryset=Empleado.objects.filter(activo=True, usuario__isnull=True).select_related('persona').order_by('persona__apellido', 'persona__nombre'),
+                required=False,
+                empty_label="— Sin empleado vinculado —",
+                widget=forms.Select(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'}),
+            )
         
         is_editing = self.instance and self.instance.pk
         if is_editing:
@@ -132,4 +152,18 @@ class UsuarioAdminForm(forms.ModelForm):
             user.set_password(password)
         if commit:
             user.save()
+            # Vincular empleado si se seleccionó
+            empleado = self.cleaned_data.get('empleado')
+            if empleado:
+                # Desvincular usuario anterior si existe
+                if empleado.usuario and empleado.usuario != user:
+                    empleado.usuario = None
+                    empleado.save(update_fields=['usuario'])
+                empleado.usuario = user
+                empleado.save(update_fields=['usuario'])
+            # Si se deseleccionó el empleado, desvincular
+            elif self.instance.pk and hasattr(self.instance, 'empleado') and self.instance.empleado:
+                emp = self.instance.empleado
+                emp.usuario = None
+                emp.save(update_fields=['usuario'])
         return user

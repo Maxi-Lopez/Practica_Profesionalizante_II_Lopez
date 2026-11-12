@@ -25,6 +25,14 @@ class Empleado(models.Model):
         related_name="empleado",
     )
 
+    usuario = models.OneToOneField(
+        'usuarios.Usuario',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="empleado",
+    )
+
     matricula = models.CharField(
         max_length=50,
         blank=True,

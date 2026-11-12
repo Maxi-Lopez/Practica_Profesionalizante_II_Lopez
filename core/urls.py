@@ -6,6 +6,7 @@ from .views import (
     CustomLogoutView,
     health_check,
     turnos_disponibilidad,
+    cambiar_estado_turno,
     PacientesListView,
     PacienteCreateView,
     PacienteUpdateView,
@@ -13,6 +14,7 @@ from .views import (
     PacienteDetailView,
     PacienteLegajoPrintView,
     TurnosListView,
+    TurnoUpdateView,
     TratamientosListView,
     EmpleadosListView,
     EmpleadoCreateView,
@@ -170,6 +172,8 @@ urlpatterns = [
     
     # Listados (requieren login)
     path('turnos/', TurnosListView.as_view(), name='turnos_list'),
+    path('turnos/editar/<int:pk>/', TurnoUpdateView.as_view(), name='turno_update'),
+    path('turnos/<int:pk>/estado/<str:nuevo_estado>/', cambiar_estado_turno, name='cambiar_estado_turno'),
     path('tratamientos/', TratamientosListView.as_view(), name='tratamientos_list'),
     path('servicios/', ServiciosListView.as_view(), name='servicios_list'),
     path('facturacion/', FacturacionListView.as_view(), name='facturacion_list'),
