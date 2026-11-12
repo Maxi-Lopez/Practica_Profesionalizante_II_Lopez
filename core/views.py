@@ -6,6 +6,7 @@ from django.contrib.auth import login
 from django.contrib import messages
 from django.urls import reverse_lazy
 from django.utils import timezone
+from django.db import models
 from datetime import timedelta
 from django.core.exceptions import PermissionDenied
 from django.http import JsonResponse
@@ -45,13 +46,59 @@ class HomeView(TemplateView):
             from tratamientos.models import PlanTratamiento
             from empleados.models import Empleado
             from django.utils import timezone
+            from django.db import models
             
-            context['pacientes_count'] = Paciente.objects.filter(activo=True).count()
-            context['turnos_hoy_count'] = Turno.objects.filter(
-                fecha=timezone.now().date()
-            ).exclude(estado=EstadoTurno.CANCELADO).count()
-            context['tratamientos_count'] = PlanTratamiento.objects.filter(activo=True).count()
-            context['empleados_count'] = Empleado.objects.filter(activo=True).count()
+            user = self.request.user
+            hoy = timezone.now().date()
+            
+            if user.is_superuser or user.rol in ['admin', 'orientador']:
+                # Admin y orientador ven todo
+                context['pacientes_count'] = Paciente.objects.filter(activo=True).count()
+                context['turnos_hoy_count'] = Turno.objects.filter(
+                    fecha=hoy
+                ).exclude(estado=EstadoTurno.CANCELADO).count()
+                context['tratamientos_count'] = PlanTratamiento.objects.filter(activo=True).count()
+                context['empleados_count'] = Empleado.objects.filter(activo=True).count()
+                context['es_admin'] = True
+            elif user.rol in ['recepcionista']:
+                # Recepcionista ve todo (gestión de turnos y pacientes)
+                context['pacientes_count'] = Paciente.objects.filter(activo=True).count()
+                context['turnos_hoy_count'] = Turno.objects.filter(
+                    fecha=hoy
+                ).exclude(estado=EstadoTurno.CANCELADO).count()
+                context['tratamientos_count'] = PlanTratamiento.objects.filter(activo=True).count()
+                context['empleados_count'] = Empleado.objects.filter(activo=True).count()
+                context['es_admin'] = False
+            elif user.rol in ['psicologo', 'medico', 'trabajador_social', 'kinesiologo', 'psicomotricista', 'nutricionista', 'psicopedagogo', 'pedagogo', 'enfermero']:
+                # Profesionales ven solo sus pacientes/turnos/tratamientos
+                if user.area:
+                    pacientes_qs = Paciente.objects.filter(activo=True).filter(
+                        models.Q(diagnosticos_area__activo=True, diagnosticos_area__area=user.area) |
+                        models.Q(seguimientos_trimestrales__activo=True, seguimientos_trimestrales__area=user.area)
+                    ).distinct()
+                    
+                    context['pacientes_count'] = pacientes_qs.count()
+                    context['turnos_hoy_count'] = Turno.objects.filter(
+                        fecha=hoy,
+                        paciente__in=pacientes_qs
+                    ).exclude(estado=EstadoTurno.CANCELADO).count()
+                    context['tratamientos_count'] = PlanTratamiento.objects.filter(
+                        activo=True, paciente__in=pacientes_qs
+                    ).count()
+                    context['empleados_count'] = 0  # No relevante para profesionales
+                else:
+                    context['pacientes_count'] = 0
+                    context['turnos_hoy_count'] = 0
+                    context['tratamientos_count'] = 0
+                    context['empleados_count'] = 0
+                context['es_admin'] = False
+                context['es_profesional'] = True
+            else:
+                context['pacientes_count'] = 0
+                context['turnos_hoy_count'] = 0
+                context['tratamientos_count'] = 0
+                context['empleados_count'] = 0
+                context['es_admin'] = False
         return context
 
 
@@ -71,23 +118,59 @@ class CustomLogoutView(LogoutView):
 # PACIENTE DETAIL & LEGAJO PRINT
 # ============================================================
 
-class PacienteDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
+class PacienteDetailView(LoginRequiredMixin, DetailView):
     model = Paciente
     template_name = 'pacientes/detail.html'
     context_object_name = 'paciente'
     login_url = 'login'
-    permission_required = 'pacientes.view_paciente'
     pk_url_kwarg = 'pk'
 
-    def get_permission_required(self):
-        if self.request.user.is_superuser:
-            return ()
-        return ('pacientes.view_paciente',)
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return self.handle_no_permission()
+        # Allow: superuser, admin, orientador, recepcionista, profesionales
+        user = request.user
+        if user.is_superuser or user.rol in ['admin', 'orientador', 'recepcionista']:
+            return super().dispatch(request, *args, **kwargs)
+        # Profesionales can view patients in their area
+        if user.rol in ['psicologo', 'medico', 'trabajador_social', 'kinesiologo', 'psicomotricista', 'nutricionista', 'psicopedagogo', 'pedagogo', 'enfermero']:
+            # Check if patient has any diagnostico/seguimiento/turno in user's area
+            paciente = self.get_object()
+            if self.paciente_en_area_del_profesional(paciente, user):
+                return super().dispatch(request, *args, **kwargs)
+            raise PermissionDenied("No tiene permiso para ver este paciente.")
+        raise PermissionDenied("No tiene permiso para ver pacientes.")
+
+    def paciente_en_area_del_profesional(self, paciente, user):
+        """Verifica si el paciente tiene relación con el área del profesional."""
+        if not user.area:
+            return False
+        # Verificar diagnósticos en el área
+        if paciente.diagnosticos_area.filter(activo=True, area=user.area).exists():
+            return True
+        # Verificar seguimientos en el área
+        if paciente.seguimientos_trimestrales.filter(activo=True, area=user.area).exists():
+            return True
+        # Verificar turnos con profesional del área (a través de Empleado)
+        # Nota: No hay link directo Usuario-Empleado, así que usamos área
+        return False
 
     def get_queryset(self):
-        return Paciente.objects.filter(activo=True).select_related(
+        user = self.request.user
+        base_qs = Paciente.objects.filter(activo=True).select_related(
             'persona', 'obra_social', 'sala', 'sala__orientador__persona'
         )
+        if user.is_superuser or user.rol in ['admin', 'orientador', 'recepcionista']:
+            return base_qs
+        if user.rol in ['psicologo', 'medico', 'trabajador_social', 'kinesiologo', 'psicomotricista', 'nutricionista', 'psicopedagogo', 'pedagogo', 'enfermero']:
+            if user.area:
+                # Filtrar pacientes que tienen diagnosticos/seguimientos en el área del profesional
+                return base_qs.filter(
+                    models.Q(diagnosticos_area__activo=True, diagnosticos_area__area=user.area) |
+                    models.Q(seguimientos_trimestrales__activo=True, seguimientos_trimestrales__area=user.area)
+                ).distinct()
+            return Paciente.objects.none()
+        return Paciente.objects.none()
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -121,21 +204,38 @@ class PacienteDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView
         return context
 
 
-class PacienteLegajoPrintView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
+class PacienteLegajoPrintView(LoginRequiredMixin, DetailView):
     model = Paciente
     template_name = 'pacientes/legajo_print.html'
     context_object_name = 'paciente'
     login_url = 'login'
-    permission_required = 'pacientes.view_paciente'
     pk_url_kwarg = 'pk'
 
-    def get_permission_required(self):
-        if self.request.user.is_superuser:
-            return ()
-        return ('pacientes.view_paciente',)
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return self.handle_no_permission()
+        user = request.user
+        if user.is_superuser or user.rol in ['admin', 'orientador', 'recepcionista']:
+            return super().dispatch(request, *args, **kwargs)
+        if user.rol in ['psicologo', 'medico', 'trabajador_social', 'kinesiologo', 'psicomotricista', 'nutricionista', 'psicopedagogo', 'pedagogo', 'enfermero']:
+            paciente = self.get_object()
+            if self.paciente_en_area_del_profesional(paciente, user):
+                return super().dispatch(request, *args, **kwargs)
+            raise PermissionDenied("No tiene permiso para imprimir el legajo de este paciente.")
+        raise PermissionDenied("No tiene permiso para imprimir legajos.")
+
+    def paciente_en_area_del_profesional(self, paciente, user):
+        if not user.area:
+            return False
+        if paciente.diagnosticos_area.filter(activo=True, area=user.area).exists():
+            return True
+        if paciente.seguimientos_trimestrales.filter(activo=True, area=user.area).exists():
+            return True
+        return False
 
     def get_queryset(self):
-        return Paciente.objects.filter(activo=True).select_related(
+        user = self.request.user
+        base_qs = Paciente.objects.filter(activo=True).select_related(
             'persona', 'obra_social', 'sala', 'sala__orientador__persona'
         ).prefetch_related(
             'persona__telefonos',
@@ -146,6 +246,16 @@ class PacienteLegajoPrintView(LoginRequiredMixin, PermissionRequiredMixin, Detai
             'seguimientos_trimestrales__profesional__persona',
             'persona__documentos'
         )
+        if user.is_superuser or user.rol in ['admin', 'orientador', 'recepcionista']:
+            return base_qs
+        if user.rol in ['psicologo', 'medico', 'trabajador_social', 'kinesiologo', 'psicomotricista', 'nutricionista', 'psicopedagogo', 'pedagogo', 'enfermero']:
+            if user.area:
+                return base_qs.filter(
+                    models.Q(diagnosticos_area__activo=True, diagnosticos_area__area=user.area) |
+                    models.Q(seguimientos_trimestrales__activo=True, seguimientos_trimestrales__area=user.area)
+                ).distinct()
+            return Paciente.objects.none()
+        return Paciente.objects.none()
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -196,7 +306,22 @@ class PacientesListView(LoginRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         from pacientes.models import Paciente
-        context['pacientes'] = Paciente.objects.select_related('persona', 'obra_social').filter(activo=True).order_by('-fecha_ingreso')
+        user = self.request.user
+        
+        base_qs = Paciente.objects.select_related('persona', 'obra_social').filter(activo=True).order_by('-fecha_ingreso')
+        
+        if user.is_superuser or user.rol in ['admin', 'orientador', 'recepcionista']:
+            context['pacientes'] = base_qs
+        elif user.rol in ['psicologo', 'medico', 'trabajador_social', 'kinesiologo', 'psicomotricista', 'nutricionista', 'psicopedagogo', 'pedagogo', 'enfermero']:
+            if user.area:
+                context['pacientes'] = base_qs.filter(
+                    models.Q(diagnosticos_area__activo=True, diagnosticos_area__area=user.area) |
+                    models.Q(seguimientos_trimestrales__activo=True, seguimientos_trimestrales__area=user.area)
+                ).distinct()
+            else:
+                context['pacientes'] = Paciente.objects.none()
+        else:
+            context['pacientes'] = Paciente.objects.none()
         return context
 
 
@@ -271,9 +396,26 @@ class TurnosListView(LoginRequiredMixin, TemplateView):
         context = super().get_context_data(**kwargs)
         from turnos.models import Turno, EstadoTurno
         from django.utils import timezone
-        context['turnos'] = Turno.objects.select_related(
+        user = self.request.user
+        
+        base_qs = Turno.objects.select_related(
             'paciente__persona', 'profesional__persona', 'servicio'
         ).exclude(estado=EstadoTurno.CANCELADO).order_by('fecha', 'hora_inicio')
+        
+        if user.is_superuser or user.rol in ['admin', 'orientador', 'recepcionista']:
+            context['turnos'] = base_qs
+        elif user.rol in ['psicologo', 'medico', 'trabajador_social', 'kinesiologo', 'psicomotricista', 'nutricionista', 'psicopedagogo', 'pedagogo', 'enfermero']:
+            if user.area:
+                # Filtrar turnos de pacientes que tienen diagnosticos/seguimientos en el área del profesional
+                context['turnos'] = base_qs.filter(
+                    models.Q(paciente__diagnosticos_area__activo=True, paciente__diagnosticos_area__area=user.area) |
+                    models.Q(paciente__seguimientos_trimestrales__activo=True, paciente__seguimientos_trimestrales__area=user.area)
+                ).distinct()
+            else:
+                context['turnos'] = Turno.objects.none()
+        else:
+            context['turnos'] = Turno.objects.none()
+        
         context['hoy'] = timezone.now().date()
         return context
 
@@ -285,7 +427,22 @@ class TratamientosListView(LoginRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         from tratamientos.models import PlanTratamiento
-        context['tratamientos'] = PlanTratamiento.objects.select_related('paciente__persona').filter(activo=True).order_by('-fecha_inicio')
+        user = self.request.user
+        
+        base_qs = PlanTratamiento.objects.select_related('paciente__persona').filter(activo=True).order_by('-fecha_inicio')
+        
+        if user.is_superuser or user.rol in ['admin', 'orientador', 'recepcionista']:
+            context['tratamientos'] = base_qs
+        elif user.rol in ['psicologo', 'medico', 'trabajador_social', 'kinesiologo', 'psicomotricista', 'nutricionista', 'psicopedagogo', 'pedagogo', 'enfermero']:
+            if user.area:
+                context['tratamientos'] = base_qs.filter(
+                    models.Q(paciente__diagnosticos_area__activo=True, paciente__diagnosticos_area__area=user.area) |
+                    models.Q(paciente__seguimientos_trimestrales__activo=True, paciente__seguimientos_trimestrales__area=user.area)
+                ).distinct()
+            else:
+                context['tratamientos'] = PlanTratamiento.objects.none()
+        else:
+            context['tratamientos'] = PlanTratamiento.objects.none()
         return context
 
 
