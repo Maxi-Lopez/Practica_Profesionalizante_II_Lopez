@@ -81,13 +81,6 @@ class Command(BaseCommand):
         seguimientos = self.seed_seguimientos(pacientes, areas, empleados)
         self.stdout.write(f'Diagnosticos: {len(diagnosticos)}, Seguimientos: {len(seguimientos)}')
 
-        # 8. Empleados
-        roles_emp = self.seed_roles_empleado()
-        empleados = self.seed_empleados(personas, roles_emp, usuarios)
-        empleado_roles = self.seed_empleado_roles(empleados, roles_emp)
-        horarios = self.seed_horarios(empleados)
-        self.stdout.write(f'Empleados: {len(empleados)}, Roles: {len(empleado_roles)}, Horarios: {len(horarios)}')
-
         # 9. Servicios
         tipos_servicio = self.seed_tipos_servicio()
         servicios = self.seed_servicios(tipos_servicio)
@@ -383,9 +376,21 @@ class Command(BaseCommand):
         return roles
 
     def seed_empleados(self, personas, roles, usuarios):
+        """Crear empleados y vincularlos a usuarios profesionales."""
         empleados = []
         personas_libres = [p for p in personas if not hasattr(p, 'paciente') and not hasattr(p, 'empleado')]
         matriculas_usadas = set()
+        
+        # Mapear usuarios profesionales por rol para vincularlos
+        usuarios_por_rol = {}
+        for user in usuarios:
+            if user.rol in ['psicologo', 'medico', 'trabajador_social', 'kinesiologo', 
+                           'psicomotricista', 'nutricionista', 'psicopedagogo', 'pedagogo', 
+                           'enfermero', 'orientador', 'recepcionista']:
+                if user.rol not in usuarios_por_rol:
+                    usuarios_por_rol[user.rol] = []
+                usuarios_por_rol[user.rol].append(user)
+        
         for i, persona in enumerate(personas_libres[:15]):
             matricula = f'MAT-{persona.dni}-{i+1:03d}'
             emp = Empleado.objects.filter(persona=persona).first()
@@ -397,6 +402,35 @@ class Command(BaseCommand):
                     activo=True,
                 )
             empleados.append(emp)
+        
+        # Vincular empleados a usuarios por rol
+        for emp in empleados:
+            # Buscar un usuario sin empleado asignado que coincida por nombre/apellido aproximado
+            # o simplemente asignar por orden
+            pass
+        
+        # Vinculación explícita: buscar usuarios profesionales y asignarles empleados
+        for user in usuarios:
+            if user.rol in ['psicologo', 'medico', 'trabajador_social', 'kinesiologo', 
+                           'psicomotricista', 'nutricionista', 'psicopedagogo', 'pedagogo', 
+                           'enfermero', 'orientador', 'recepcionista']:
+                # Si el usuario ya tiene empleado, saltar
+                if hasattr(user, 'empleado') and user.empleado:
+                    continue
+                # Buscar empleado sin usuario que coincida por nombre/apellido
+                emp = Empleado.objects.filter(
+                    usuario__isnull=True,
+                    activo=True,
+                    persona__nombre__iexact=user.first_name,
+                    persona__apellido__iexact=user.last_name
+                ).first()
+                if not emp:
+                    # Fallback: primer empleado sin usuario
+                    emp = Empleado.objects.filter(usuario__isnull=True, activo=True).first()
+                if emp:
+                    emp.usuario = user
+                    emp.save(update_fields=['usuario'])
+        
         return empleados
 
     def seed_empleado_roles(self, empleados, roles):

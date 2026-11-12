@@ -13,6 +13,7 @@ from tratamientos.models import (
     HistorialMedico, EvolucionSemanal, RegistroActividad, NotaImportante
 )
 from servicios.models import Servicio
+from turnos.models import Turno, EstadoTurno
 
 
 class PacienteForm(forms.ModelForm):
@@ -1158,3 +1159,95 @@ class NotaImportanteForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['paciente'].queryset = Paciente.objects.filter(activo=True).select_related('persona').order_by('persona__apellido', 'persona__nombre')
         self.fields['profesional'].queryset = Empleado.objects.filter(activo=True).select_related('persona').order_by('persona__apellido', 'persona__nombre')
+
+
+class TurnoForm(forms.ModelForm):
+    paciente = forms.ModelChoiceField(
+        queryset=Paciente.objects.filter(activo=True).select_related('persona').order_by('persona__apellido', 'persona__nombre'),
+        label="Concurrente",
+        empty_label="Seleccionar concurrente",
+        widget=forms.Select(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'})
+    )
+    profesional = forms.ModelChoiceField(
+        queryset=Empleado.objects.filter(activo=True).select_related('persona').order_by('persona__apellido', 'persona__nombre'),
+        label="Profesional",
+        empty_label="Seleccionar profesional",
+        widget=forms.Select(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'})
+    )
+    servicio = forms.ModelChoiceField(
+        queryset=Servicio.objects.filter(activo=True).select_related('tipo_servicio').order_by('tipo_servicio__nombre', 'nombre'),
+        label="Servicio / Motivo",
+        empty_label="Seleccionar servicio",
+        widget=forms.Select(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'})
+    )
+    fecha = forms.DateField(
+        label="Fecha",
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'})
+    )
+    hora_inicio = forms.TimeField(
+        label="Hora de Inicio",
+        widget=forms.TimeInput(attrs={'type': 'time', 'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'})
+    )
+    hora_fin = forms.TimeField(
+        label="Hora de Fin",
+        widget=forms.TimeInput(attrs={'type': 'time', 'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'})
+    )
+    estado = forms.ChoiceField(
+        choices=EstadoTurno.choices,
+        label="Estado",
+        widget=forms.Select(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'})
+    )
+    observaciones = forms.CharField(
+        required=False,
+        label="Observaciones",
+        widget=forms.Textarea(attrs={'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors', 'rows': 3})
+    )
+
+    class Meta:
+        model = Turno
+        fields = ['paciente', 'profesional', 'servicio', 'fecha', 'hora_inicio', 'hora_fin', 'estado', 'observaciones']
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        self.fields['paciente'].queryset = Paciente.objects.filter(activo=True).select_related('persona').order_by('persona__apellido', 'persona__nombre')
+        self.fields['profesional'].queryset = Empleado.objects.filter(activo=True).select_related('persona').order_by('persona__apellido', 'persona__nombre')
+        self.fields['servicio'].queryset = Servicio.objects.filter(activo=True).select_related('tipo_servicio').order_by('tipo_servicio__nombre', 'nombre')
+        
+        if user and not (user.is_superuser or user.rol in ['admin', 'recepcionista', 'orientador']):
+            self.fields['profesional'].widget = forms.HiddenInput()
+            if hasattr(user, 'empleado') and user.empleado:
+                self.fields['profesional'].initial = user.empleado
+
+    def clean(self):
+        cleaned_data = super().clean()
+        hora_inicio = cleaned_data.get('hora_inicio')
+        hora_fin = cleaned_data.get('hora_fin')
+        fecha = cleaned_data.get('fecha')
+        profesional = cleaned_data.get('profesional')
+        
+        if hora_inicio and hora_fin and hora_fin <= hora_inicio:
+            self.add_error('hora_fin', "La hora de fin debe ser posterior a la hora de inicio.")
+        
+        if fecha and hora_inicio and not self.instance.pk:
+            from django.utils import timezone
+            from datetime import datetime
+            turno_datetime = timezone.make_aware(datetime.combine(fecha, hora_inicio))
+            if turno_datetime < timezone.now():
+                self.add_error('fecha', "No se puede agendar un turno en el pasado.")
+        
+        if fecha and hora_inicio and hora_fin and profesional:
+            from django.db.models import Q
+            solapamiento = Turno.objects.filter(
+                profesional=profesional,
+                fecha=fecha,
+                estado__in=[EstadoTurno.PENDIENTE, EstadoTurno.CONFIRMADO],
+            ).filter(
+                Q(hora_inicio__lt=hora_fin) & Q(hora_fin__gt=hora_inicio)
+            )
+            if self.instance.pk:
+                solapamiento = solapamiento.exclude(pk=self.instance.pk)
+            if solapamiento.exists():
+                self.add_error('hora_inicio', "El profesional ya tiene un turno en ese horario.")
+        
+        return cleaned_data
