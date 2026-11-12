@@ -1,7 +1,7 @@
 # Variables de entorno
 .env
 .env.*
-!.env.example
+.env.example
 
 # Python
 __pycache__/
@@ -32,3 +32,16 @@ staticfiles/
 
 #Untracked files:
 .coverage
+
+
+# Scripts locales
+core/management/commands/seed_data.py
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Archivos temporales / no deseados en la raíz
+como funciona.txt
+schema.yml
