@@ -419,6 +419,8 @@ class TurnosListView(LoginRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         from turnos.models import Turno, EstadoTurno
+        from servicios.models import Servicio
+        from pacientes.models import Paciente
         from django.utils import timezone
         user = self.request.user
         
@@ -444,8 +446,98 @@ class TurnosListView(LoginRequiredMixin, TemplateView):
         else:
             context['turnos'] = Turno.objects.none()
         
+        # Para el modal: pacientes y servicios
+        context['pacientes'] = Paciente.objects.filter(activo=True).select_related('persona').order_by('persona__apellido', 'persona__nombre')
+        context['servicios'] = Servicio.objects.filter(activo=True).order_by('nombre')
+        
         context['hoy'] = timezone.now().date()
         return context
+    
+    def post(self, request, *args, **kwargs):
+        from turnos.models import Turno, EstadoTurno
+        from pacientes.models import Paciente
+        from servicios.models import Servicio
+        from empleados.models import Empleado
+        from personas.models import Email
+        from django.utils import timezone
+        from django.db.models import Q
+        from django.contrib import messages
+        
+        action = request.POST.get('action')
+        if action != 'crear_turno':
+            return self.get(request, *args, **kwargs)
+        
+        paciente_id = request.POST.get('paciente')
+        fecha = request.POST.get('fecha')
+        hora_inicio = request.POST.get('hora_inicio')
+        hora_fin = request.POST.get('hora_fin')
+        servicio_id = request.POST.get('servicio')
+        observaciones = request.POST.get('observaciones', '')
+        
+        # Validaciones básicas
+        if not all([paciente_id, fecha, hora_inicio, hora_fin, servicio_id]):
+            messages.error(request, 'Todos los campos obligatorios deben completarse.')
+            return self.get(request, *args, **kwargs)
+        
+        try:
+            paciente = Paciente.objects.get(pk=paciente_id, activo=True)
+            servicio = Servicio.objects.get(pk=servicio_id, activo=True)
+        except (Paciente.DoesNotExist, Servicio.DoesNotExist):
+            messages.error(request, 'Concurrente o servicio no válido.')
+            return self.get(request, *args, **kwargs)
+        
+        # Determinar el profesional
+        profesional = None
+        user = request.user
+        
+        if user.is_superuser or user.rol in ['admin', 'recepcionista', 'orientador']:
+            # Admin/Recepción/Orientador: permitir seleccionar profesional (por ahora usamos el primero disponible)
+            # TODO: Agregar campo profesional en el formulario si es admin
+            profesional_qs = Empleado.objects.filter(activo=True).order_by('persona__apellido')
+            if user.rol == 'recepcionista' and profesional_qs.exists():
+                profesional = profesional_qs.first()
+        elif user.rol in ['psicologo', 'medico', 'trabajador_social', 'kinesiologo', 'psicomotricista', 'nutricionista', 'psicopedagogo', 'pedagogo', 'enfermero']:
+            # Profesional: asignar automáticamente al profesional logueado
+            if user.email:
+                empleado_personas = Email.objects.filter(
+                    direccion_email=user.email, activo=True
+                ).values_list('persona_id', flat=True)
+                if empleado_personas:
+                    profesional = Empleado.objects.filter(
+                        persona_id__in=empleado_personas, activo=True
+                    ).first()
+        
+        if not profesional:
+            messages.error(request, 'No se pudo determinar el profesional para el turno.')
+            return self.get(request, *args, **kwargs)
+        
+        # Validar solapamiento de horarios
+        solapamiento = Turno.objects.filter(
+            profesional=profesional,
+            fecha=fecha,
+            estado__in=[EstadoTurno.PENDIENTE, EstadoTurno.CONFIRMADO],
+        ).filter(
+            Q(hora_inicio__lt=hora_fin) & Q(hora_fin__gt=hora_inicio)
+        ).exists()
+        
+        if solapamiento:
+            messages.error(request, f'El profesional ya tiene un turno en ese horario.')
+            return self.get(request, *args, **kwargs)
+        
+        # Crear el turno
+        turno = Turno.objects.create(
+            paciente=paciente,
+            profesional=profesional,
+            servicio=servicio,
+            fecha=fecha,
+            hora_inicio=hora_inicio,
+            hora_fin=hora_fin,
+            estado=EstadoTurno.PENDIENTE,
+            observaciones=observaciones,
+        )
+        
+        messages.success(request, f'Turno agendado exitosamente para {paciente.persona.nombre_completo} el {fecha}.')
+        return self.get(request, *args, **kwargs)
 
 
 class TratamientosListView(LoginRequiredMixin, TemplateView):
