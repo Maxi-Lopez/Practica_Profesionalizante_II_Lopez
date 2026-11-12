@@ -421,7 +421,10 @@ class TurnosListView(LoginRequiredMixin, TemplateView):
         from turnos.models import Turno, EstadoTurno
         from servicios.models import Servicio
         from pacientes.models import Paciente
+        from empleados.models import Empleado
+        from personas.models import Email
         from django.utils import timezone
+        from django.db.models import Q
         user = self.request.user
         
         base_qs = Turno.objects.select_related(
@@ -434,7 +437,6 @@ class TurnosListView(LoginRequiredMixin, TemplateView):
             # Profesional: ver solo SUS turnos asignados (vinculados por email)
             profesional_qs = Turno.objects.none()
             if user.email:
-                from personas.models import Email
                 empleado_personas = Email.objects.filter(
                     direccion_email=user.email, activo=True
                 ).values_list('persona_id', flat=True)
@@ -449,6 +451,30 @@ class TurnosListView(LoginRequiredMixin, TemplateView):
         # Para el modal: pacientes y servicios
         context['pacientes'] = Paciente.objects.filter(activo=True).select_related('persona').order_by('persona__apellido', 'persona__nombre')
         context['servicios'] = Servicio.objects.filter(activo=True).order_by('nombre')
+        
+        # Profesionales para el dropdown (admin/recepcionista/orientador)
+        if user.is_superuser or user.rol in ['admin', 'orientador', 'recepcionista']:
+            context['profesionales'] = Empleado.objects.filter(activo=True).select_related('persona').order_by('persona__apellido', 'persona__nombre')
+            # Serializar para Alpine.js
+            import json
+            context['profesionales_json'] = json.dumps([
+                {'id': p.id, 'nombre': f'{p.persona.apellido}, {p.persona.nombre} (DNI: {p.persona.dni})'} 
+                for p in context['profesionales']
+            ])
+        else:
+            context['profesionales'] = Empleado.objects.none()
+            context['profesionales_json'] = '[]'
+        
+        # ID del profesional actual (para profesionales)
+        if user.rol in ['psicologo', 'medico', 'trabajador_social', 'kinesiologo', 'psicomotricista', 'nutricionista', 'psicopedagogo', 'pedagogo', 'enfermero']:
+            if user.email:
+                empleado_personas = Email.objects.filter(
+                    direccion_email=user.email, activo=True
+                ).values_list('persona_id', flat=True)
+                if empleado_personas:
+                    prof = Empleado.objects.filter(persona_id__in=empleado_personas, activo=True).first()
+                    if prof:
+                        context['profesional_id'] = prof.id
         
         context['hoy'] = timezone.now().date()
         return context
@@ -538,6 +564,81 @@ class TurnosListView(LoginRequiredMixin, TemplateView):
         
         messages.success(request, f'Turno agendado exitosamente para {paciente.persona.nombre_completo} el {fecha}.')
         return self.get(request, *args, **kwargs)
+
+
+def turnos_disponibilidad(request):
+    """
+    Endpoint para verificar disponibilidad de horarios para un profesional en una fecha.
+    GET /api/turnos/disponibles/?fecha=YYYY-MM-DD&hora_inicio=HH:MM&hora_fin=HH:MM&profesional_id=X
+    """
+    from turnos.models import Turno, EstadoTurno
+    from empleados.models import Empleado
+    from django.http import JsonResponse
+    from django.db.models import Q
+    from datetime import datetime, timedelta
+    
+    fecha = request.GET.get('fecha')
+    hora_inicio = request.GET.get('hora_inicio')
+    hora_fin = request.GET.get('hora_fin')
+    profesional_id = request.GET.get('profesional_id')
+    
+    if not all([fecha, hora_inicio, hora_fin, profesional_id]):
+        return JsonResponse({'error': 'Parámetros faltantes'}, status=400)
+    
+    try:
+        profesional = Empleado.objects.get(pk=profesional_id, activo=True)
+    except Empleado.DoesNotExist:
+        return JsonResponse({'error': 'Profesional no encontrado'}, status=404)
+    
+    # Verificar si hay solapamiento
+    solapamiento = Turno.objects.filter(
+        profesional=profesional,
+        fecha=fecha,
+        estado__in=[EstadoTurno.PENDIENTE, EstadoTurno.CONFIRMADO],
+    ).filter(
+        Q(hora_inicio__lt=hora_fin) & Q(hora_fin__gt=hora_inicio)
+    ).exists()
+    
+    if solapamiento:
+        # Buscar horarios libres sugeridos en el mismo día
+        turnos_ocupados = Turno.objects.filter(
+            profesional=profesional,
+            fecha=fecha,
+            estado__in=[EstadoTurno.PENDIENTE, EstadoTurno.CONFIRMADO],
+        ).order_by('hora_inicio')
+        
+        # Generar slots de 30 minutos desde 8:00 hasta 20:00
+        sugerencias = []
+        inicio_dia = datetime.strptime('08:00', '%H:%M')
+        fin_dia = datetime.strptime('20:00', '%H:%M')
+        duracion = datetime.strptime(hora_fin, '%H:%M') - datetime.strptime(hora_inicio, '%H:%M')
+        
+        current = inicio_dia
+        while current + duracion <= fin_dia:
+            slot_inicio = current.strftime('%H:%M')
+            slot_fin = (current + duracion).strftime('%H:%M')
+            
+            # Verificar si este slot está libre
+            conflicto = False
+            for t in turnos_ocupados:
+                if t.hora_inicio < (current + duracion).time() and t.hora_fin > current.time():
+                    conflicto = True
+                    break
+            
+            if not conflicto:
+                sugerencias.append({'inicio': slot_inicio, 'fin': slot_fin})
+                if len(sugerencias) >= 3:
+                    break
+            
+            current += timedelta(minutes=30)
+        
+        return JsonResponse({
+            'disponible': False,
+            'mensaje': 'El profesional ya tiene un turno en este horario. Por favor, elegí otro.',
+            'sugerencias': sugerencias
+        })
+    
+    return JsonResponse({'disponible': True})
 
 
 class TratamientosListView(LoginRequiredMixin, TemplateView):

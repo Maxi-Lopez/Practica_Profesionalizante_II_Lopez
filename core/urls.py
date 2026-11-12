@@ -5,6 +5,7 @@ from .views import (
     CustomLoginView,
     CustomLogoutView,
     health_check,
+    turnos_disponibilidad,
     PacientesListView,
     PacienteCreateView,
     PacienteUpdateView,
@@ -94,6 +95,7 @@ from .views import (
 urlpatterns = [
     path('', HomeView.as_view(), name='home'),
     path('health/', health_check, name='health_check'),
+    path('api/turnos/disponibles/', turnos_disponibilidad, name='turnos_disponibilidad'),
     path('login/', CustomLoginView.as_view(), name='login'),
     path('logout/', CustomLogoutView.as_view(), name='logout'),
     path('register/', RedirectView.as_view(url='/login/', permanent=False), name='register'),
