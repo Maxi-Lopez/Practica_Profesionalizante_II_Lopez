@@ -313,11 +313,35 @@ class PacientesListView(LoginRequiredMixin, TemplateView):
         if user.is_superuser or user.rol in ['admin', 'orientador', 'recepcionista']:
             context['pacientes'] = base_qs
         elif user.rol in ['psicologo', 'medico', 'trabajador_social', 'kinesiologo', 'psicomotricista', 'nutricionista', 'psicopedagogo', 'pedagogo', 'enfermero']:
+            # Profesional: ver pacientes que tienen turnos asignados A ÉL, 
+            # O diagnosticos/seguimientos en SU ÁREA
+            profesional_qs = Paciente.objects.none()
+            if user.email:
+                # Buscar empleados vinculados por email
+                from personas.models import Email
+                empleado_personas = Email.objects.filter(
+                    direccion_email=user.email, activo=True
+                ).values_list('persona_id', flat=True)
+                if empleado_personas:
+                    profesional_qs = base_qs.filter(
+                        turnos__profesional__persona_id__in=empleado_personas
+                    ).distinct()
+            
+            # También incluir pacientes de su área (diagnósticos/seguimientos)
+            area_qs = Paciente.objects.none()
             if user.area:
-                context['pacientes'] = base_qs.filter(
+                area_qs = base_qs.filter(
                     models.Q(diagnosticos_area__activo=True, diagnosticos_area__area=user.area) |
                     models.Q(seguimientos_trimestrales__activo=True, seguimientos_trimestrales__area=user.area)
                 ).distinct()
+            
+            # Unir ambos querysets
+            if profesional_qs and area_qs:
+                context['pacientes'] = (profesional_qs | area_qs).distinct()
+            elif profesional_qs:
+                context['pacientes'] = profesional_qs
+            elif area_qs:
+                context['pacientes'] = area_qs
             else:
                 context['pacientes'] = Paciente.objects.none()
         else:
@@ -405,14 +429,18 @@ class TurnosListView(LoginRequiredMixin, TemplateView):
         if user.is_superuser or user.rol in ['admin', 'orientador', 'recepcionista']:
             context['turnos'] = base_qs
         elif user.rol in ['psicologo', 'medico', 'trabajador_social', 'kinesiologo', 'psicomotricista', 'nutricionista', 'psicopedagogo', 'pedagogo', 'enfermero']:
-            if user.area:
-                # Filtrar turnos de pacientes que tienen diagnosticos/seguimientos en el área del profesional
-                context['turnos'] = base_qs.filter(
-                    models.Q(paciente__diagnosticos_area__activo=True, paciente__diagnosticos_area__area=user.area) |
-                    models.Q(paciente__seguimientos_trimestrales__activo=True, paciente__seguimientos_trimestrales__area=user.area)
-                ).distinct()
-            else:
-                context['turnos'] = Turno.objects.none()
+            # Profesional: ver solo SUS turnos asignados (vinculados por email)
+            profesional_qs = Turno.objects.none()
+            if user.email:
+                from personas.models import Email
+                empleado_personas = Email.objects.filter(
+                    direccion_email=user.email, activo=True
+                ).values_list('persona_id', flat=True)
+                if empleado_personas:
+                    profesional_qs = base_qs.filter(
+                        profesional__persona_id__in=empleado_personas
+                    ).distinct()
+            context['turnos'] = profesional_qs
         else:
             context['turnos'] = Turno.objects.none()
         
@@ -434,11 +462,36 @@ class TratamientosListView(LoginRequiredMixin, TemplateView):
         if user.is_superuser or user.rol in ['admin', 'orientador', 'recepcionista']:
             context['tratamientos'] = base_qs
         elif user.rol in ['psicologo', 'medico', 'trabajador_social', 'kinesiologo', 'psicomotricista', 'nutricionista', 'psicopedagogo', 'pedagogo', 'enfermero']:
+            # Profesional: ver planes de sus pacientes (turnos asignados O área)
+            profesional_qs = PlanTratamiento.objects.none()
+            if user.email:
+                from personas.models import Email
+                empleado_personas = Email.objects.filter(
+                    direccion_email=user.email, activo=True
+                ).values_list('persona_id', flat=True)
+                if empleado_personas:
+                    # Pacientes con turnos asignados a este profesional
+                    paciente_ids = Paciente.objects.filter(
+                        turnos__profesional__persona_id__in=empleado_personas
+                    ).values_list('id', flat=True).distinct()
+                    if paciente_ids:
+                        profesional_qs = base_qs.filter(paciente_id__in=paciente_ids)
+            
+            # También incluir planes de pacientes en su área
+            area_qs = PlanTratamiento.objects.none()
             if user.area:
-                context['tratamientos'] = base_qs.filter(
+                area_qs = base_qs.filter(
                     models.Q(paciente__diagnosticos_area__activo=True, paciente__diagnosticos_area__area=user.area) |
                     models.Q(paciente__seguimientos_trimestrales__activo=True, paciente__seguimientos_trimestrales__area=user.area)
                 ).distinct()
+            
+            # Unir ambos
+            if profesional_qs and area_qs:
+                context['tratamientos'] = (profesional_qs | area_qs).distinct()
+            elif profesional_qs:
+                context['tratamientos'] = profesional_qs
+            elif area_qs:
+                context['tratamientos'] = area_qs
             else:
                 context['tratamientos'] = PlanTratamiento.objects.none()
         else:

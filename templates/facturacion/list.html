@@ -9,12 +9,14 @@
             <h1 class="text-2xl font-bold text-gray-900">Facturación</h1>
             <p class="text-gray-600 mt-1">Gestión de facturas y pagos</p>
         </div>
+        {% if perms.facturacion.add_facturaventa %}
         <a href="#" class="bg-primary-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-700 transition-colors flex items-center justify-center">
             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
             </svg>
             Nueva Factura
         </a>
+        {% endif %}
     </div>
 
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6">
@@ -81,12 +83,14 @@
                 </svg>
                 <h3 class="text-lg font-medium text-gray-900 mb-1">No hay facturas registradas</h3>
                 <p class="text-gray-500 mb-4">Comienza creando tu primera factura.</p>
+                {% if perms.facturacion.add_facturaventa %}
                 <a href="#" class="bg-primary-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-700 transition-colors inline-flex items-center">
                     <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                     </svg>
                     Crear la primera
                 </a>
+                {% endif %}
             </div>
         {% endif %}
     </div>
