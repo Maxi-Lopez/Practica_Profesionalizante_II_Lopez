@@ -460,7 +460,7 @@ class TurnosListView(LoginRequiredMixin, TemplateView):
         else:
             context['turnos'] = Turno.objects.none()
         
-        # Aplicar búsqueda si existe el parámetro
+        # Aplicar filtro de búsqueda
         search = self.request.GET.get('search', '').strip()
         if search:
             search_q = Q(paciente__persona__nombre__icontains=search) | \
@@ -1047,7 +1047,18 @@ class SalasListView(LoginRequiredMixin, ListView):
     login_url = 'login'
 
     def get_queryset(self):
-        return Sala.objects.filter(activo=True).select_related('orientador__persona').order_by('nombre')
+        qs = Sala.objects.filter(activo=True).select_related('orientador__persona').order_by('nombre')
+        
+        # Aplicar filtro de búsqueda
+        search = self.request.GET.get('search', '').strip()
+        if search:
+            from django.db.models import Q
+            search_q = Q(nombre__icontains=search) | \
+                       Q(orientador__persona__nombre__icontains=search) | \
+                       Q(orientador__persona__apellido__icontains=search)
+            qs = qs.filter(search_q)
+        
+        return qs
 
 
 class SalaCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
@@ -1125,7 +1136,17 @@ class AreasListView(LoginRequiredMixin, ListView):
     login_url = 'login'
 
     def get_queryset(self):
-        return AreaInterdisciplinaria.objects.filter(activo=True).order_by('nombre')
+        qs = AreaInterdisciplinaria.objects.filter(activo=True).order_by('nombre')
+        
+        # Aplicar filtro de búsqueda
+        search = self.request.GET.get('search', '').strip()
+        if search:
+            from django.db.models import Q
+            search_q = Q(nombre__icontains=search) | \
+                       Q(descripcion__icontains=search)
+            qs = qs.filter(search_q)
+        
+        return qs
 
 
 class AreaCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
@@ -1203,9 +1224,28 @@ class DiagnosticosListView(LoginRequiredMixin, ListView):
     login_url = 'login'
 
     def get_queryset(self):
-        return DiagnosticoArea.objects.filter(activo=True).select_related(
+        user = self.request.user
+        qs = DiagnosticoArea.objects.filter(activo=True).select_related(
             'paciente__persona', 'area', 'profesional__persona'
         ).order_by('-fecha')
+        
+        # Filtrar por permisos de rol (profesionales solo ven su área)
+        if user.rol in ['psicologo', 'medico', 'trabajador_social', 'kinesiologo', 
+                        'psicomotricista', 'nutricionista', 'psicopedagogo', 'pedagogo', 'enfermero']:
+            if user.area:
+                qs = qs.filter(area=user.area)
+        
+        # Aplicar filtro de búsqueda
+        search = self.request.GET.get('search', '').strip()
+        if search:
+            from django.db.models import Q
+            search_q = Q(diagnostico__icontains=search) | \
+                       Q(paciente__persona__nombre__icontains=search) | \
+                       Q(paciente__persona__apellido__icontains=search) | \
+                       Q(area__nombre__icontains=search)
+            qs = qs.filter(search_q)
+        
+        return qs
 
 
 class DiagnosticoCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
@@ -1683,7 +1723,38 @@ class PlanesListView(LoginRequiredMixin, ListView):
     login_url = 'login'
 
     def get_queryset(self):
-        return PlanTratamiento.objects.filter(activo=True).select_related('paciente__persona').order_by('-fecha_inicio')
+        user = self.request.user
+        qs = PlanTratamiento.objects.filter(activo=True).select_related('paciente__persona').order_by('-fecha_inicio')
+        
+        # Filtrar por permisos de rol
+        if user.rol in ['psicologo', 'medico', 'trabajador_social', 'kinesiologo', 
+                        'psicomotricista', 'nutricionista', 'psicopedagogo', 'pedagogo', 'enfermero']:
+            # Profesional: ver planes de sus pacientes (turnos asignados O área)
+            from pacientes.models import Paciente
+            if hasattr(user, 'empleado') and user.empleado:
+                paciente_ids = Paciente.objects.filter(
+                    turnos__profesional=user.empleado
+                ).values_list('id', flat=True).distinct()
+                if paciente_ids:
+                    qs = qs.filter(paciente_id__in=paciente_ids)
+            if user.area:
+                area_qs = qs.filter(
+                    paciente__diagnosticos_area__activo=True, 
+                    paciente__diagnosticos_area__area=user.area
+                ).distinct()
+                qs = (qs | area_qs).distinct()
+        
+        # Aplicar filtro de búsqueda
+        search = self.request.GET.get('search', '').strip()
+        if search:
+            from django.db.models import Q
+            search_q = Q(nombre__icontains=search) | \
+                       Q(paciente__persona__nombre__icontains=search) | \
+                       Q(paciente__persona__apellido__icontains=search) | \
+                       Q(paciente__persona__dni__icontains=search)
+            qs = qs.filter(search_q)
+        
+        return qs
 
 
 class PlanCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):

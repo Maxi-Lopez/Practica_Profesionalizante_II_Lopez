@@ -20,18 +20,24 @@
     </div>
 
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6">
-        <form method="get" class="flex flex-col sm:flex-row gap-4">
-            <div class="flex-1">
-                <input type="text" name="search" value="{{ request.GET.search }}" placeholder="Buscar por paciente, nombre..." class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors">
+        <form method="get" id="search-form-planes" onsubmit="return false;" class="relative">
+            <label for="search-input-planes" class="sr-only">Buscar planes</label>
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
             </div>
-            <button type="submit" class="bg-primary-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-700 transition-colors whitespace-nowrap">Buscar</button>
-            {% if request.GET.search %}
-                <a href="{% url 'planes_list' %}" class="px-4 py-2 border border-gray-300 rounded-lg font-medium hover:bg-gray-50 transition-colors whitespace-nowrap">Limpiar</a>
-            {% endif %}
+            <input type="text"
+                   name="search"
+                   id="search-input-planes"
+                   value="{{ request.GET.search }}"
+                   placeholder="Buscar por paciente, nombre, DNI..." 
+                   class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 focus:outline-none transition-colors"
+                   autocomplete="off">
         </form>
     </div>
 
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden" id="tabla-planes-container">
         {% if planes %}
             <div class="overflow-x-auto">
                 <table class="w-full">
@@ -47,7 +53,7 @@
                     </thead>
                     <tbody class="divide-y divide-gray-200">
                         {% for plan in planes %}
-                            <tr class="hover:bg-gray-50 cursor-pointer" onclick="window.location='{% url 'plan_update' plan.pk %}'">
+                            <tr class="hover:bg-gray-50 cursor-pointer" data-id="{{ plan.pk }}">
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ plan.paciente.persona.nombre }} {{ plan.paciente.persona.apellido }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ plan.nombre }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ plan.fecha_inicio|date:"d/m/Y" }}</td>
@@ -61,10 +67,10 @@
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                     {% if perms.tratamientos.change_plantratamiento and plan.activo %}
-                                    <a href="{% url 'plan_update' plan.pk %}" onclick="event.stopPropagation()" class="text-primary-600 hover:text-primary-900 mr-3">Editar</a>
+                                    <a href="{% url 'plan_update' plan.pk %}" class="text-primary-600 hover:text-primary-900 mr-3">Editar</a>
                                     {% endif %}
                                     {% if perms.tratamientos.delete_plantratamiento and plan.activo %}
-                                    <form action="{% url 'plan_delete' plan.pk %}" method="post" class="inline" onsubmit="event.stopPropagation(); return confirm('¿Está seguro de que desea dar de baja a este plan de tratamiento?');">
+                                    <form action="{% url 'plan_delete' plan.pk %}" method="post" class="inline" onsubmit="return confirm('¿Está seguro de que desea dar de baja a este plan de tratamiento?');">
                                         {% csrf_token %}
                                         <button type="submit" class="text-red-600 hover:text-red-900">Eliminar</button>
                                     </form>
@@ -94,4 +100,53 @@
         {% endif %}
     </div>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const input = document.getElementById('search-input-planes');
+    const container = document.getElementById('tabla-planes-container');
+
+    if (!input || !container) return;
+
+    let timeout = null;
+
+    input.addEventListener('input', function() {
+        clearTimeout(timeout);
+        const query = this.value.trim();
+
+        timeout = setTimeout(function() {
+            const url = new URL(window.location.href);
+            if (query) {
+                url.searchParams.set('search', query);
+            } else {
+                url.searchParams.delete('search');
+            }
+
+            container.style.opacity = '0.5';
+
+            fetch(url, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(response => response.text())
+            .then(html => {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const newContainer = doc.getElementById('tabla-planes-container');
+
+                if (newContainer) {
+                    container.innerHTML = newContainer.innerHTML;
+                    window.history.replaceState({}, '', url);
+                }
+                container.style.opacity = '1';
+            })
+            .catch(error => {
+                console.error('Error en la busqueda:', error);
+                container.style.opacity = '1';
+            });
+        }, 300);
+    });
+});
+</script>
 {% endblock %}
