@@ -477,6 +477,14 @@ class TurnosListView(LoginRequiredMixin, TemplateView):
                         context['profesional_id'] = prof.id
         
         context['hoy'] = timezone.now().date()
+        
+        # Generar slots de hora (00:00 a 23:30 en intervalos de 30 min)
+        time_slots = []
+        for h in range(24):
+            for m in (0, 30):
+                time_slots.append(f"{h:02d}:{m:02d}")
+        context['time_slots'] = time_slots
+        
         return context
     
     def post(self, request, *args, **kwargs):
@@ -570,7 +578,7 @@ class TurnosListView(LoginRequiredMixin, TemplateView):
             observaciones=observaciones,
         )
         
-        messages.success(request, f'Turno agendado exitosamente para {paciente.persona.nombre_completo} el {fecha}.')
+        messages.success(request, f'Turno agendado exitosamente para {paciente.persona} el {fecha}.')
         return self.get(request, *args, **kwargs)
 
 
