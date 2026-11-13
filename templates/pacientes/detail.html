@@ -336,5 +336,209 @@
             </div>
         </div>
     </div>
+
+    <!-- Historial Clínico Unificado (Ancho completo) -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mt-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <svg class="w-5 h-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+            Historial Clínico
+        </h2>
+        
+        <!-- Tabs Navigation -->
+        <nav class="flex gap-4 border-b border-gray-200 mb-4" aria-label="Historial clínico" role="tablist">
+            <button type="button" class="tab-btn px-3 py-2 text-sm font-medium text-primary-600 border-b-2 border-primary-600" data-tab="planes" role="tab" aria-selected="true" aria-controls="tab-planes">Planes</button>
+            <button type="button" class="tab-btn px-3 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent" data-tab="objetivos" role="tab" aria-selected="false" aria-controls="tab-objetivos">Objetivos</button>
+            <button type="button" class="tab-btn px-3 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent" data-tab="evoluciones" role="tab" aria-selected="false" aria-controls="tab-evoluciones">Evoluciones</button>
+            <button type="button" class="tab-btn px-3 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent" data-tab="registros" role="tab" aria-selected="false" aria-controls="tab-registros">Registros</button>
+            <button type="button" class="tab-btn px-3 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent" data-tab="notas" role="tab" aria-selected="false" aria-controls="tab-notas">Notas</button>
+            <button type="button" class="tab-btn px-3 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent" data-tab="historiales" role="tab" aria-selected="false" aria-controls="tab-historiales">Historial</button>
+        </nav>
+        
+        <!-- Tab Panels -->
+        <div class="tab-panels">
+            <!-- Planes -->
+            <div id="tab-planes" class="tab-panel" role="tabpanel" aria-labelledby="tab-planes">
+                {% if planes %}
+                <div class="space-y-3">
+                    {% for plan in planes %}
+                    <div class="border border-gray-200 rounded-lg p-4">
+                        <div class="flex items-start justify-between gap-2 mb-2">
+                            <span class="font-medium text-gray-900">{{ plan.nombre }}</span>
+                            <span class="text-xs text-gray-500 whitespace-nowrap">{{ plan.fecha_inicio|date:"d/m/Y" }}{% if plan.fecha_fin %} - {{ plan.fecha_fin|date:"d/m/Y" }}{% endif %}</span>
+                        </div>
+                        <p class="text-sm text-gray-700 mb-2">{{ plan.descripcion|truncatewords:30|default:"Sin descripción" }}</p>
+                        <div class="flex items-center gap-4 text-xs text-gray-500 mb-2">
+                            <span>Objetivos: {{ plan.objetivos.count }}</span>
+                            <span>Actividades: {{ plan.actividades.count }}</span>
+                            <span>Evoluciones: {{ plan.evoluciones.count }}</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            {% if perms.tratamientos.change_plantratamiento and puede_editar_planes %}
+                            <a href="{% url 'plan_update' plan.pk %}" class="text-primary-600 hover:underline text-sm">Editar</a>
+                            {% elif perms.tratamientos.view_plantratamiento %}
+                            <a href="{% url 'plan_detail' plan.pk %}" class="text-primary-600 hover:underline text-sm">Ver</a>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-gray-500 text-sm text-center py-4">Sin planes de tratamiento registrados</p>
+                {% endif %}
+            </div>
+            
+            <!-- Objetivos -->
+            <div id="tab-objetivos" class="tab-panel hidden" role="tabpanel" aria-labelledby="tab-objetivos">
+                {% if objetivos %}
+                <div class="space-y-3">
+                    {% for objetivo in objetivos %}
+                    <div class="border border-gray-200 rounded-lg p-4">
+                        <div class="flex items-start justify-between gap-2 mb-2">
+                            <span class="font-medium text-gray-900">{{ objetivo.plan_tratamiento.nombre }}</span>
+                            <span class="text-xs px-2 py-0.5 rounded {% if objetivo.cumplido %}bg-green-100 text-green-800{% else %}bg-amber-100 text-amber-800{% endif %}">
+                                {% if objetivo.cumplido %}Cumplido{% else %}Pendiente{% endif %}
+                            </span>
+                        </div>
+                        <p class="text-sm text-gray-700 mb-2">{{ objetivo.descripcion|truncatewords:30 }}</p>
+                        <div class="text-xs text-gray-500">
+                            Plan: {{ objetivo.plan_tratamiento.nombre }}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-gray-500 text-sm text-center py-4">Sin objetivos registrados</p>
+                {% endif %}
+            </div>
+            
+            <!-- Evoluciones -->
+            <div id="tab-evoluciones" class="tab-panel hidden" role="tabpanel" aria-labelledby="tab-evoluciones">
+                {% if evoluciones %}
+                <div class="space-y-3 max-h-96 overflow-y-auto">
+                    {% for evo in evoluciones %}
+                    <div class="border border-gray-200 rounded-lg p-4">
+                        <div class="flex items-start justify-between gap-2 mb-2">
+                            <span class="font-medium text-gray-900">{{ evo.plan_tratamiento.nombre|default:"Sin plan" }}</span>
+                            <span class="text-xs text-gray-500 whitespace-nowrap">{{ evo.fecha|date:"d/m/Y" }}</span>
+                        </div>
+                        <p class="text-sm text-gray-700 mb-2">{{ evo.descripcion|truncatewords:30 }}</p>
+                        <div class="text-xs text-gray-500">
+                            Por: {{ evo.profesional.persona|default:"—" }}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-gray-500 text-sm text-center py-4">Sin evoluciones registradas</p>
+                {% endif %}
+            </div>
+            
+            <!-- Registros -->
+            <div id="tab-registros" class="tab-panel hidden" role="tabpanel" aria-labelledby="tab-registros">
+                {% if registros %}
+                <div class="space-y-3 max-h-96 overflow-y-auto">
+                    {% for reg in registros %}
+                    <div class="border border-gray-200 rounded-lg p-4">
+                        <div class="flex items-start justify-between gap-2 mb-2">
+                            <span class="font-medium text-gray-900">{{ reg.actividad.descripcion|truncatewords:10 }}</span>
+                            <span class="text-xs text-gray-500 whitespace-nowrap">{{ reg.fecha|date:"d/m/Y H:i" }}</span>
+                        </div>
+                        <p class="text-sm text-gray-700 mb-2">{{ reg.descripcion|truncatewords:30|default:"Sin descripción" }}</p>
+                        <div class="flex items-center gap-2 text-xs text-gray-500">
+                            <span class="{% if reg.realizado %}text-green-600{% else %}text-red-600{% endif %}">
+                                {% if reg.realizado %}✓ Realizado{% else %}✗ No realizado{% endif %}
+                            </span>
+                            <span>Por: {{ reg.profesional.persona|default:"—" }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-gray-500 text-sm text-center py-4">Sin registros de actividad</p>
+                {% endif %}
+            </div>
+            
+            <!-- Notas -->
+            <div id="tab-notas" class="tab-panel hidden" role="tabpanel" aria-labelledby="tab-notas">
+                {% if notas %}
+                <div class="space-y-3 max-h-96 overflow-y-auto">
+                    {% for nota in notas %}
+                    <div class="border border-gray-200 rounded-lg p-4">
+                        <div class="flex items-start justify-between gap-2 mb-2">
+                            <span class="font-medium text-gray-900">{{ nota.titulo }}</span>
+                            <span class="text-xs text-gray-500 whitespace-nowrap">{{ nota.fecha|date:"d/m/Y H:i" }}</span>
+                        </div>
+                        <p class="text-sm text-gray-700 mb-2">{{ nota.descripcion|truncatewords:30 }}</p>
+                        <div class="text-xs text-gray-500">
+                            Por: {{ nota.profesional.persona|default:"—" }}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-gray-500 text-sm text-center py-4">Sin notas importantes</p>
+                {% endif %}
+            </div>
+            
+            <!-- Historial -->
+            <div id="tab-historiales" class="tab-panel hidden" role="tabpanel" aria-labelledby="tab-historiales">
+                {% if historiales %}
+                <div class="space-y-3 max-h-96 overflow-y-auto">
+                    {% for hist in historiales %}
+                    <div class="border border-gray-200 rounded-lg p-4">
+                        <div class="flex items-start justify-between gap-2 mb-2">
+                            <span class="font-medium text-gray-900">{{ hist.fecha|date:"d/m/Y H:i" }}</span>
+                        </div>
+                        <p class="text-sm text-gray-700 mb-2">{{ hist.descripcion|truncatewords:30 }}</p>
+                        {% if hist.observaciones %}
+                        <p class="text-sm text-gray-500 mb-2">{{ hist.observaciones|truncatewords:20 }}</p>
+                        {% endif %}
+                        <div class="text-xs text-gray-500">
+                            Por: {{ hist.profesional.persona|default:"—" }}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-gray-500 text-sm text-center py-4">Sin historial médico registrado</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <script>
+        // Tab switching functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const tabBtns = document.querySelectorAll('.tab-btn');
+            const tabPanels = document.querySelectorAll('.tab-panel');
+            
+            tabBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const targetTab = btn.dataset.tab;
+                    
+                    // Update buttons
+                    tabBtns.forEach(b => {
+                        b.classList.remove('text-primary-600', 'border-primary-600');
+                        b.classList.add('text-gray-500', 'border-transparent');
+                        b.setAttribute('aria-selected', 'false');
+                    });
+                    btn.classList.add('text-primary-600', 'border-primary-600');
+                    btn.classList.remove('text-gray-500', 'border-transparent');
+                    btn.setAttribute('aria-selected', 'true');
+                    
+                    // Update panels
+                    tabPanels.forEach(panel => {
+                        if (panel.id === 'tab-' + targetTab) {
+                            panel.classList.remove('hidden');
+                        } else {
+                            panel.classList.add('hidden');
+                        }
+                    });
+                });
+            });
+        });
+        </script>
+    </div>
 </div>
 {% endblock %}
