@@ -983,6 +983,84 @@ class FacturacionListView(LoginRequiredMixin, TemplateView):
         return context
 
 
+# ============================================================
+# FACTURA DETAIL & PRINT
+# ============================================================
+
+class FacturaDetailView(LoginRequiredMixin, DetailView):
+    model = None  # Se define en get_queryset
+    template_name = 'facturacion/detail.html'
+    context_object_name = 'factura'
+    login_url = 'login'
+    pk_url_kwarg = 'pk'
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return self.handle_no_permission()
+        user = request.user
+        # Permitir: superuser, admin, orientador, recepcionista
+        if user.is_superuser or user.rol in ['admin', 'orientador', 'recepcionista']:
+            return super().dispatch(request, *args, **kwargs)
+        # Bloquear a profesionales
+        if user.rol in ['psicologo', 'medico', 'trabajador_social', 'kinesiologo', 'psicomotricista', 'nutricionista', 'psicopedagogo', 'pedagogo', 'enfermero']:
+            raise PermissionDenied("No tiene permiso para ver facturas.")
+        raise PermissionDenied("No tiene permiso para ver facturas.")
+
+    def get_queryset(self):
+        from facturacion.models import FacturaVenta, EstadoFactura
+        user = self.request.user
+        base_qs = FacturaVenta.objects.select_related(
+            'paciente__persona', 'obra_social'
+        ).prefetch_related(
+            'detalles__servicio', 'pagos'
+        ).exclude(estado=EstadoFactura.ANULADA)
+        return base_qs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        from django.utils import timezone
+        context['fecha_impresion'] = timezone.now()
+        context['usuario_impresion'] = self.request.user.get_full_name() or self.request.user.username
+        return context
+
+
+class FacturaPrintView(LoginRequiredMixin, DetailView):
+    model = None  # Se define en get_queryset
+    template_name = 'facturacion/factura_print.html'
+    context_object_name = 'factura'
+    login_url = 'login'
+    pk_url_kwarg = 'pk'
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return self.handle_no_permission()
+        user = request.user
+        # Permitir: superuser, admin, orientador, recepcionista
+        if user.is_superuser or user.rol in ['admin', 'orientador', 'recepcionista']:
+            return super().dispatch(request, *args, **kwargs)
+        # Bloquear a profesionales
+        if user.rol in ['psicologo', 'medico', 'trabajador_social', 'kinesiologo', 'psicomotricista', 'nutricionista', 'psicopedagogo', 'pedagogo', 'enfermero']:
+            raise PermissionDenied("No tiene permiso para imprimir facturas.")
+        raise PermissionDenied("No tiene permiso para imprimir facturas.")
+
+    def get_queryset(self):
+        from facturacion.models import FacturaVenta, EstadoFactura
+        user = self.request.user
+        base_qs = FacturaVenta.objects.select_related(
+            'paciente__persona', 'obra_social'
+        ).prefetch_related(
+            'detalles__servicio', 'pagos'
+        ).exclude(estado=EstadoFactura.ANULADA)
+        return base_qs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        from django.utils import timezone
+        context['fecha_impresion'] = timezone.now()
+        context['usuario_impresion'] = self.request.user.get_full_name() or self.request.user.username
+        return context
+
+
 class InventarioListView(LoginRequiredMixin, TemplateView):
     template_name = 'inventario/list.html'
     login_url = 'login'

@@ -29,63 +29,73 @@
         </div>
     </div>
 
+    <!-- Features Section (Solo para NO autenticados) -->
+    {% if not user.is_authenticated %}
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+        <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+            <div class="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center mb-4">
+                <svg class="w-6 h-6 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                </svg>
+            </div>
+            <h3 class="text-xl font-semibold text-gray-900 mb-2">Gestión de Concurrentes</h3>
+            <p class="text-gray-600">Historial clínico, diagnósticos, responsables y obra social integrados en un solo lugar.</p>
+        </div>
+        
+        <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+            <div class="w-12 h-12 bg-accent-100 rounded-lg flex items-center justify-center mb-4">
+                <svg class="w-6 h-6 text-accent-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                </svg>
+            </div>
+            <h3 class="text-xl font-semibold text-gray-900 mb-2">Agenda de Turnos</h3>
+            <p class="text-gray-600">Programación inteligente con validación de disponibilidad profesional y recordatorios automáticos.</p>
+        </div>
+        
+        <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+            <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4">
+                <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+            </div>
+            <h3 class="text-xl font-semibold text-gray-900 mb-2">Planes de Tratamiento</h3>
+            <p class="text-gray-600">Objetivos, actividades, evoluciones semanales y seguimiento multidisciplinario completo.</p>
+        </div>
+    </div>
+    {% endif %}
+
     {% if user.is_authenticated %}
         <!-- ========================================== -->
         <!-- BLOQUE ADMIN / ORIENTADOR / RECEPCIONISTA  -->
         <!-- ========================================== -->
         {% if user.is_superuser or user.rol == 'admin' or user.rol == 'orientador' or user.rol == 'recepcionista' %}
             
-            <!-- Features Section -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-                <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-                    <div class="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center mb-4">
-                        <svg class="w-6 h-6 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
-                        </svg>
-                    </div>
-                    <h3 class="text-xl font-semibold text-gray-900 mb-2">Gestión de Concurrentes</h3>
-                    <p class="text-gray-600">Historial clínico, diagnósticos, responsables y obra social integrados en un solo lugar.</p>
-                </div>
-                
-                <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-                    <div class="w-12 h-12 bg-accent-100 rounded-lg flex items-center justify-center mb-4">
-                        <svg class="w-6 h-6 text-accent-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                        </svg>
-                    </div>
-                    <h3 class="text-xl font-semibold text-gray-900 mb-2">Agenda de Turnos</h3>
-                    <p class="text-gray-600">Programación inteligente con validación de disponibilidad profesional y recordatorios automáticos.</p>
-                </div>
-                
-                <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-                    <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4">
-                        <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                        </svg>
-                    </div>
-                    <h3 class="text-xl font-semibold text-gray-900 mb-2">Planes de Tratamiento</h3>
-                    <p class="text-gray-600">Objetivos, actividades, evoluciones semanales y seguimiento multidisciplinario completo.</p>
-                </div>
-            </div>
-
             <!-- Stats Section (Admin) -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-                <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-                    <p class="text-sm text-gray-500">Total Concurrentes</p>
-                    <p class="text-3xl font-bold text-primary-600 mt-1">{% if pacientes_count %}{{ pacientes_count }}{% else %}—{% endif %}</p>
-                </div>
-                <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-                    <p class="text-sm text-gray-500">Turnos Hoy</p>
-                    <p class="text-3xl font-bold text-accent-600 mt-1">{% if turnos_hoy_count %}{{ turnos_hoy_count }}{% else %}—{% endif %}</p>
-                </div>
-                <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-                    <p class="text-sm text-gray-500">Tratamientos Activos</p>
-                    <p class="text-3xl font-bold text-green-600 mt-1">{% if tratamientos_count %}{{ tratamientos_count }}{% else %}—{% endif %}</p>
-                </div>
-                <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-                    <p class="text-sm text-gray-500">Empleados</p>
-                    <p class="text-3xl font-bold text-gray-700 mt-1">{% if empleados_count %}{{ empleados_count }}{% else %}—{% endif %}</p>
-                </div>
+                <a href="{% url 'pacientes_list' %}" class="block hover:shadow-md transition-shadow cursor-pointer">
+                    <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                        <p class="text-sm text-gray-500">Total Concurrentes</p>
+                        <p class="text-3xl font-bold text-primary-600 mt-1">{% if pacientes_count %}{{ pacientes_count }}{% else %}—{% endif %}</p>
+                    </div>
+                </a>
+                <a href="{% url 'turnos_list' %}" class="block hover:shadow-md transition-shadow cursor-pointer">
+                    <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                        <p class="text-sm text-gray-500">Turnos Hoy</p>
+                        <p class="text-3xl font-bold text-accent-600 mt-1">{% if turnos_hoy_count %}{{ turnos_hoy_count }}{% else %}—{% endif %}</p>
+                    </div>
+                </a>
+                <a href="{% url 'planes_list' %}" class="block hover:shadow-md transition-shadow cursor-pointer">
+                    <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                        <p class="text-sm text-gray-500">Tratamientos Activos</p>
+                        <p class="text-3xl font-bold text-green-600 mt-1">{% if tratamientos_count %}{{ tratamientos_count }}{% else %}—{% endif %}</p>
+                    </div>
+                </a>
+                <a href="{% url 'empleados_list' %}" class="block hover:shadow-md transition-shadow cursor-pointer">
+                    <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                        <p class="text-sm text-gray-500">Empleados</p>
+                        <p class="text-3xl font-bold text-gray-700 mt-1">{% if empleados_count %}{{ empleados_count }}{% else %}—{% endif %}</p>
+                    </div>
+                </a>
             </div>
 
             <!-- CUD Alert Banner -->

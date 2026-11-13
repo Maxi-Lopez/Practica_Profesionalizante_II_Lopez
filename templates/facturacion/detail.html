@@ -1,0 +1,188 @@
+{% extends 'base.html' %}
+
+{% block title %}Factura {{ factura.numero_factura }} - Centro de Día Proyectar{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <!-- Header con botones de acción -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Factura {{ factura.numero_factura }}</h1>
+            <p class="text-gray-600 mt-1">{{ factura.paciente.persona.nombre }} {{ factura.paciente.persona.apellido }}</p>
+        </div>
+        <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+            <a href="{% url 'factura_print' factura.pk %}" target="_blank" 
+               class="bg-primary-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-700 transition-colors flex items-center justify-center text-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+                </svg>
+                Imprimir Factura
+            </a>
+            <a href="{% url 'facturacion_list' %}" 
+               class="px-4 py-2 border border-gray-300 rounded-lg font-medium hover:bg-gray-50 transition-colors text-center whitespace-nowrap">
+                Volver al listado
+            </a>
+        </div>
+    </div>
+
+    <!-- Información de la factura -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div>
+                <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mb-2">Datos de la Factura</h3>
+                <dl class="space-y-3">
+                    <div>
+                        <dt class="text-sm text-gray-500">Número</dt>
+                        <dd class="text-lg font-medium text-gray-900">{{ factura.numero_factura }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm text-gray-500">Fecha</dt>
+                        <dd class="text-lg font-medium text-gray-900">{{ factura.fecha|date:"d/m/Y H:i" }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm text-gray-500">Estado</dt>
+                        <dd class="text-lg font-medium text-gray-900">
+                            {% if factura.estado == "PENDIENTE" %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Pendiente</span>
+                            {% elif factura.estado == "PAGADA" %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Pagada</span>
+                            {% elif factura.estado == "PARCIAL" %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">Parcial</span>
+                            {% elif factura.estado == "ANULADA" %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Anulada</span>
+                            {% else %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">{{ factura.estado }}</span>
+                            {% endif %}
+                        </dd>
+                    </div>
+                </dl>
+            </div>
+            <div>
+                <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mb-2">Datos del Concurrente</h3>
+                <dl class="space-y-3">
+                    <div>
+                        <dt class="text-sm text-gray-500">Nombre</dt>
+                        <dd class="text-lg font-medium text-gray-900">{{ factura.paciente.persona.nombre }} {{ factura.paciente.persona.apellido }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm text-gray-500">DNI</dt>
+                        <dd class="text-lg font-medium text-gray-900">{{ factura.paciente.persona.dni }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm text-gray-500">Obra Social</dt>
+                        <dd class="text-lg font-medium text-gray-900">{{ factura.obra_social.nombre|default:"Particular" }}</dd>
+                    </div>
+                    {% if factura.paciente.nro_afiliado %}
+                    <div>
+                        <dt class="text-sm text-gray-500">N° Afiliado</dt>
+                        <dd class="text-lg font-medium text-gray-900">{{ factura.paciente.nro_afiliado }}</dd>
+                    </div>
+                    {% endif %}
+                </dl>
+            </div>
+        </div>
+
+        {% if factura.observaciones %}
+        <div class="border-t border-gray-200 pt-4">
+            <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mb-2">Observaciones</h3>
+            <p class="text-gray-700">{{ factura.observaciones }}</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Detalles de la factura -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
+        <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mb-4">Detalles</h3>
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descripción</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Cantidad</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Precio Unitario</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Subtotal</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    {% for detalle in factura.detalles.all %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {{ detalle.descripcion }}
+                            {% if detalle.servicio %}
+                                <span class="text-gray-500 text-xs ml-2">({{ detalle.servicio.nombre }})</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-700">{{ detalle.cantidad }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-700">${{ detalle.precio_unitario|floatformat:2 }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-gray-900">${{ detalle.subtotal|floatformat:2 }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="px-6 py-4 text-center text-gray-500">Sin detalles registrados</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Pagos -->
+    {% if factura.pagos.all %}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
+        <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mb-4">Pagos Registrados</h3>
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Monto</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Medio de Pago</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Referencia</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    {% for pago in factura.pagos.all %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ pago.fecha|date:"d/m/Y H:i" }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-gray-900">${{ pago.monto|floatformat:2 }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ pago.get_medio_pago_display }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ pago.referencia|default:"—" }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            {% if pago.anulado %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Anulado</span>
+                            {% else %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Válido</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Totales -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <div class="max-w-xs mx-auto">
+            <dl class="space-y-3">
+                <div class="flex justify-between">
+                    <dt class="text-gray-700">Subtotal</dt>
+                    <dd class="text-gray-900 font-medium">${{ factura.subtotal|floatformat:2 }}</dd>
+                </div>
+                {% if factura.descuento and factura.descuento > 0 %}
+                <div class="flex justify-between">
+                    <dt class="text-gray-700">Descuento</dt>
+                    <dd class="text-gray-900 font-medium text-red-600">-${{ factura.descuento|floatformat:2 }}</dd>
+                </div>
+                {% endif %}
+                <div class="border-t border-gray-200 pt-3 flex justify-between">
+                    <dt class="text-lg font-bold text-gray-900">Total</dt>
+                    <dd class="text-lg font-bold text-gray-900">${{ factura.total|floatformat:2 }}</dd>
+                </div>
+            </dl>
+        </div>
+    </div>
+</div>
+{% endblock %}

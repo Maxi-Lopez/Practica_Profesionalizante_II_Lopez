@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Factura {{ factura.numero_factura }} - Centro de Día Proyectar</title>
+    {% load static %}
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 11pt;
+            line-height: 1.5;
+            color: #1a1a1a;
+            margin: 0;
+            padding: 20px;
+            background: white;
+        }
+        
+        .page {
+            max-width: 210mm;
+            margin: 0 auto;
+        }
+        
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 3px solid #1a1a1a;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .header-left {
+            flex: 1;
+        }
+        
+        .header-left h1 {
+            font-size: 18pt;
+            font-weight: bold;
+            margin: 0 0 5px 0;
+            color: #1a1a1a;
+        }
+        
+        .header-left .meta {
+            font-size: 9pt;
+            color: #666;
+            line-height: 1.6;
+        }
+        
+        .header-right {
+            text-align: right;
+            flex: 1;
+        }
+        
+        .factura-box {
+            border: 2px solid #1a1a1a;
+            padding: 15px;
+            background: #fafafa;
+            min-width: 200px;
+        }
+        
+        .factura-box .label {
+            font-size: 8pt;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+        }
+        
+        .factura-box .value {
+            font-size: 14pt;
+            font-weight: bold;
+            color: #1a1a1a;
+        }
+        
+        .factura-box .estado {
+            font-size: 9pt;
+            font-weight: bold;
+            padding: 4px 8px;
+            border-radius: 3px;
+            display: inline-block;
+            margin-top: 10px;
+        }
+        
+        .estado-pendiente { background: #fff3cd; color: #856404; }
+        .estado-pagada { background: #d4edda; color: #155724; }
+        .estado-parcial { background: #d1ecf1; color: #0c5460; }
+        .estado-anulada { background: #f8d7da; color: #721c24; }
+        
+        .logo {
+            max-height: 80px;
+            width: auto;
+        }
+        
+        /* Sections */
+        .section {
+            margin-bottom: 20px;
+            page-break-inside: avoid;
+        }
+        
+        .section-title {
+            font-size: 12pt;
+            font-weight: bold;
+            color: #1a1a1a;
+            border-bottom: 1px solid #333;
+            padding-bottom: 3px;
+            margin-bottom: 10px;
+        }
+        
+        .fields-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        
+        .field {
+            min-width: 180px;
+        }
+        
+        .field-label {
+            font-size: 9pt;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 2px;
+        }
+        
+        .field-value {
+            font-size: 11pt;
+            color: #1a1a1a;
+            font-weight: 500;
+        }
+        
+        /* Tables */
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 9pt;
+            margin-top: 8px;
+        }
+        
+        .table th,
+        .table td {
+            border: 1px solid #ccc;
+            padding: 6px 8px;
+            text-align: left;
+            vertical-align: top;
+        }
+        
+        .table th {
+            background-color: #f0f0f0;
+            font-weight: bold;
+            color: #1a1a1a;
+        }
+        
+        .table td.text-center { text-align: center; }
+        .table td.text-right { text-align: right; }
+        
+        .table tfoot td {
+            font-weight: bold;
+        }
+        
+        .table tfoot .total-row td {
+            font-size: 11pt;
+            background-color: #f0f0f0;
+        }
+        
+        .table tr:nth-child(even) td {
+            background-color: #fafafa;
+        }
+        
+        /* Footer */
+        .footer {
+            margin-top: 30px;
+            padding-top: 15px;
+            border-top: 1px solid #ccc;
+            text-align: center;
+            font-size: 8pt;
+            color: #666;
+        }
+        
+        /* No-print elements */
+        .no-print {
+            display: block;
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .no-print button,
+        .no-print a {
+            padding: 10px 20px;
+            margin: 0 10px;
+            font-size: 10pt;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .btn-print {
+            background: #1a73e8;
+            color: white;
+            border: none;
+        }
+        
+        .btn-back {
+            background: #f1f3f4;
+            color: #1a1a1a;
+            border: 1px solid #dadce0;
+        }
+        
+        /* Print media */
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            
+            body {
+                font-size: 10pt;
+                padding: 0;
+            }
+            
+            .page {
+                max-width: none;
+            }
+            
+            @page {
+                size: A4;
+                margin: 1.5cm;
+            }
+            
+            .section {
+                page-break-inside: auto;
+            }
+            
+            .table {
+                page-break-inside: auto;
+            }
+            
+            .table tr {
+                page-break-inside: avoid;
+                page-break-after: auto;
+            }
+            
+            .table thead {
+                display: table-header-group;
+            }
+            
+            .table tfoot {
+                display: table-footer-group;
+            }
+            
+            .section-title {
+                page-break-after: avoid;
+            }
+            
+            .fields-grid {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            a {
+                text-decoration: none;
+                color: inherit;
+            }
+            
+            .header {
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-left">
+                <img src="{% static 'img/logo.jpg' %}" alt="Centro de Día Proyectar" class="logo">
+                <div class="meta">
+                    Laguna Blanca 1345, X5800 Río Cuarto<br>
+                    Tel: 0358 479-7326
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="factura-box">
+                    <div class="label">Factura N°</div>
+                    <div class="value">{{ factura.numero_factura }}</div>
+                    <div class="label" style="margin-top: 10px;">Fecha</div>
+                    <div class="value" style="font-size: 10pt;">{{ factura.fecha|date:"d/m/Y" }}</div>
+                    <div class="label" style="margin-top: 10px;">Estado</div>
+                    <div class="value estado estado-{{ factura.estado|lower }}">{{ factura.get_estado_display }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Datos del Cliente -->
+        <div class="section">
+            <div class="section-title">DATOS DEL CONCURRENTE</div>
+            <div class="fields-grid">
+                <div class="field">
+                    <div class="field-label">Nombre</div>
+                    <div class="field-value">{{ factura.paciente.persona.nombre }} {{ factura.paciente.persona.apellido }}</div>
+                </div>
+                <div class="field">
+                    <div class="field-label">DNI</div>
+                    <div class="field-value">{{ factura.paciente.persona.dni }}</div>
+                </div>
+                <div class="field">
+                    <div class="field-label">Obra Social</div>
+                    <div class="field-value">{{ factura.obra_social.nombre|default:"Particular" }}</div>
+                </div>
+                {% if factura.paciente.nro_afiliado %}
+                <div class="field">
+                    <div class="field-label">N° Afiliado</div>
+                    <div class="field-value">{{ factura.paciente.nro_afiliado }}</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Detalles -->
+        <div class="section">
+            <div class="section-title">DETALLES</div>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th style="width: 50%;">Descripción</th>
+                        <th style="width: 15%;" class="text-center">Cantidad</th>
+                        <th style="width: 17.5%;" class="text-right">Precio Unit.</th>
+                        <th style="width: 17.5%;" class="text-right">Subtotal</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for detalle in factura.detalles.all %}
+                    <tr>
+                        <td>{{ detalle.descripcion }}{% if detalle.servicio %} <span style="color: #666; font-size: 8pt;">({{ detalle.servicio.nombre }})</span>{% endif %}</td>
+                        <td class="text-center">{{ detalle.cantidad }}</td>
+                        <td class="text-right">${{ detalle.precio_unitario|floatformat:2 }}</td>
+                        <td class="text-right">${{ detalle.subtotal|floatformat:2 }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" style="text-align: center; color: #666; font-style: italic;">Sin detalles registrados</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="3" class="text-right">Subtotal</td>
+                        <td class="text-right">${{ factura.subtotal|floatformat:2 }}</td>
+                    </tr>
+                    {% if factura.descuento and factura.descuento > 0 %}
+                    <tr>
+                        <td colspan="3" class="text-right">Descuento</td>
+                        <td class="text-right" style="color: #dc2626;">-${{ factura.descuento|floatformat:2 }}</td>
+                    </tr>
+                    {% endif %}
+                    <tr class="total-row">
+                        <td colspan="3" class="text-right">TOTAL</td>
+                        <td class="text-right">${{ factura.total|floatformat:2 }}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        <!-- Pagos -->
+        {% if factura.pagos.all %}
+        <div class="section">
+            <div class="section-title">PAGOS REGISTRADOS</div>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th style="width: 25%;">Fecha</th>
+                        <th style="width: 15%;" class="text-right">Monto</th>
+                        <th style="width: 25%;">Medio de Pago</th>
+                        <th style="width: 20%;">Referencia</th>
+                        <th style="width: 15%;">Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for pago in factura.pagos.all %}
+                    <tr>
+                        <td>{{ pago.fecha|date:"d/m/Y H:i" }}</td>
+                        <td class="text-right">${{ pago.monto|floatformat:2 }}</td>
+                        <td>{{ pago.get_medio_pago_display }}</td>
+                        <td>{{ pago.referencia|default:"—" }}</td>
+                        <td>
+                            {% if pago.anulado %}
+                                <span style="color: #dc2626; font-weight: bold;">Anulado</span>
+                            {% else %}
+                                <span style="color: #16a34a; font-weight: bold;">Válido</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+
+        <!-- Observaciones -->
+        {% if factura.observaciones %}
+        <div class="section">
+            <div class="section-title">OBSERVACIONES</div>
+            <p style="color: #1a1a1a;">{{ factura.observaciones }}</p>
+        </div>
+        {% endif %}
+
+        <!-- Footer -->
+        <div class="footer">
+            Documento generado automáticamente por el sistema Centro de Día Proyectar<br>
+            Fecha de impresión: {{ fecha_impresion|date:"d/m/Y H:i" }} &bull; Usuario: {{ usuario_impresion }}
+        </div>
+
+        <!-- Botones no imprimibles -->
+        <div class="no-print">
+            <button class="btn-print" onclick="window.print()">
+                <svg width="16" height="16" style="vertical-align: middle; margin-right: 5px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+                </svg>
+                Imprimir / Guardar como PDF
+            </button>
+            <a href="{% url 'factura_detail' factura.pk %}" class="btn-back">
+                <svg width="16" height="16" style="vertical-align: middle; margin-right: 5px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                </svg>
+                Volver al detalle
+            </a>
+        </div>
+    </div>
+
+    <script>
+        // Auto-print al cargar si viene con ?print=1
+        if (new URLSearchParams(window.location.search).get('print') === '1') {
+            window.onload = function() {
+                window.print();
+            };
+        }
+    </script>
+</body>
+</html>

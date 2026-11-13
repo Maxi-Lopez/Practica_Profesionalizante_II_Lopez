@@ -4,7 +4,7 @@
             <div class="flex items-center">
                 <a href="{% url 'home' %}" class="flex items-center space-x-2">
                     <img src="{% static 'img/logo.jpg' %}" alt="Centro de Día Proyectar" class="h-8 w-auto">
-                    <span class="text-xl font-bold text-primary-800 hidden sm:block">Centro de Día Proyectar</span>
+                    <span class="text-sm sm:text-xl font-bold text-primary-800 hidden sm:block">Centro de Día Proyectar</span>
                 </a>
             </div>
             
@@ -19,7 +19,7 @@
                     </div>
                     
                     <div class="flex items-center space-x-4">
-                        <span class="text-sm text-gray-600 hidden sm:block">{{ user.get_full_name|default:user.username }}</span>
+                        <span class="text-xs sm:text-sm text-gray-600 truncate max-w-[80px] sm:max-w-none">{{ user.get_full_name|default:user.username }}</span>
                         <form method="post" action="{% url 'logout' %}" class="inline">
                             {% csrf_token %}
                             <button type="submit" class="text-gray-600 hover:text-primary-600 font-medium transition-colors">
