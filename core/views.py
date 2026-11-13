@@ -229,6 +229,21 @@ class PacienteDetailView(LoginRequiredMixin, DetailView):
         user = self.request.user
         base_qs = Paciente.objects.filter(activo=True).select_related(
             'persona', 'obra_social', 'sala', 'sala__orientador__persona'
+        ).prefetch_related(
+            'planes_tratamiento__objetivos',
+            'planes_tratamiento__actividades__servicio',
+            'planes_tratamiento__evoluciones__profesional__persona',
+            'historial_medico__profesional__persona',
+            'evoluciones__profesional__persona',
+            'evoluciones__plan_tratamiento',
+            'registros_actividad__profesional__persona',
+            'registros_actividad__actividad__plan_tratamiento',
+            'notas_importantes__profesional__persona',
+            'persona__documentos',
+            'diagnosticos_area__area',
+            'diagnosticos_area__profesional__persona',
+            'seguimientos_trimestrales__area',
+            'seguimientos_trimestrales__profesional__persona',
         )
         if user.is_superuser or user.rol in ['admin', 'orientador', 'recepcionista']:
             return base_qs
@@ -254,6 +269,7 @@ class PacienteDetailView(LoginRequiredMixin, DetailView):
         context['perms'] = self.request.user.get_all_permissions()
         
         paciente = self.object
+        user = self.request.user
         hoy = timezone.now().date()
         
         # Flags para CUD
@@ -277,6 +293,60 @@ class PacienteDetailView(LoginRequiredMixin, DetailView):
         else:
             context['pases_vencidos'] = False
             context['pases_proximos_a_vencer'] = False
+        
+        # Historial Clínico Unificado
+        # Planes de tratamiento
+        context['planes'] = paciente.planes_tratamiento.filter(activo=True).order_by('-fecha_inicio')
+        
+        # Objetivos
+        from tratamientos.models import ObjetivoTratamiento
+        context['objetivos'] = ObjetivoTratamiento.objects.filter(
+            plan_tratamiento__paciente=paciente,
+            plan_tratamiento__activo=True,
+            activo=True
+        ).select_related('plan_tratamiento').order_by('-fecha_creacion')
+        
+        # Actividades
+        from tratamientos.models import ActividadPlan
+        context['actividades'] = ActividadPlan.objects.filter(
+            plan_tratamiento__paciente=paciente,
+            plan_tratamiento__activo=True,
+            activo=True
+        ).select_related('plan_tratamiento', 'servicio').order_by('-fecha_creacion')
+        
+        # Historiales médicos
+        context['historiales'] = paciente.historial_medico.select_related(
+            'profesional__persona'
+        ).order_by('-fecha')
+        
+        # Evoluciones semanales
+        context['evoluciones'] = paciente.evoluciones.select_related(
+            'profesional__persona', 'plan_tratamiento'
+        ).order_by('-fecha')
+        
+        # Registros de actividad
+        context['registros'] = paciente.registros_actividad.select_related(
+            'profesional__persona', 'actividad__plan_tratamiento'
+        ).order_by('-fecha')
+        
+        # Notas importantes
+        context['notas'] = paciente.notas_importantes.select_related(
+            'profesional__persona'
+        ).order_by('-fecha')
+        
+        # Permiso de edición para planes (profesional solo si tiene actividad en el plan)
+        profesional = getattr(user, 'empleado', None)
+        if user.is_superuser or user.rol in ['admin', 'orientador']:
+            context['puede_editar_planes'] = True
+        elif profesional:
+            # Verificar si el profesional tiene alguna actividad en los planes del paciente
+            planes_ids = paciente.planes_tratamiento.filter(activo=True).values_list('id', flat=True)
+            context['puede_editar_planes'] = ActividadPlan.objects.filter(
+                plan_tratamiento_id__in=planes_ids,
+                servicio__profesionales__empleado=profesional
+            ).exists()
+        else:
+            context['puede_editar_planes'] = False
         
         return context
 
