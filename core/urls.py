@@ -21,6 +21,8 @@ from .views import (
     EmpleadoDeleteView,
     ServiciosListView,
     FacturacionListView,
+    FacturaDetailView,
+    FacturaPrintView,
     InventarioListView,
     ComprasListView,
     DocumentosListView,
@@ -177,6 +179,8 @@ urlpatterns = [
     path('turnos/<int:pk>/estado/<str:nuevo_estado>/', cambiar_estado_turno, name='cambiar_estado_turno'),
     path('servicios/', ServiciosListView.as_view(), name='servicios_list'),
     path('facturacion/', FacturacionListView.as_view(), name='facturacion_list'),
+    path('facturacion/<int:pk>/', FacturaDetailView.as_view(), name='factura_detail'),
+    path('facturacion/<int:pk>/imprimir/', FacturaPrintView.as_view(), name='factura_print'),
     path('inventario/', InventarioListView.as_view(), name='inventario_list'),
     
     # Planes de Tratamiento CRUD
