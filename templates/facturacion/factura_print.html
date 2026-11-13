@@ -368,41 +368,6 @@
             </table>
         </div>
 
-        <!-- Pagos -->
-        {% if factura.pagos.all %}
-        <div class="section">
-            <div class="section-title">PAGOS REGISTRADOS</div>
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th style="width: 25%;">Fecha</th>
-                        <th style="width: 15%;" class="text-right">Monto</th>
-                        <th style="width: 25%;">Medio de Pago</th>
-                        <th style="width: 20%;">Referencia</th>
-                        <th style="width: 15%;">Estado</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for pago in factura.pagos.all %}
-                    <tr>
-                        <td>{{ pago.fecha|date:"d/m/Y H:i" }}</td>
-                        <td class="text-right">${{ pago.monto|floatformat:2 }}</td>
-                        <td>{{ pago.get_medio_pago_display }}</td>
-                        <td>{{ pago.referencia|default:"—" }}</td>
-                        <td>
-                            {% if pago.anulado %}
-                                <span style="color: #dc2626; font-weight: bold;">Anulado</span>
-                            {% else %}
-                                <span style="color: #16a34a; font-weight: bold;">Válido</span>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        {% endif %}
-
         <!-- Observaciones -->
         {% if factura.observaciones %}
         <div class="section">
