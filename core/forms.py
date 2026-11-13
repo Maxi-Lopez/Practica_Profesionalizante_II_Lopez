@@ -1,4 +1,5 @@
 from django import forms
+from django.contrib.auth.forms import AuthenticationForm
 from pacientes.models import (
     Paciente, ObraSocial, Sala, AreaInterdisciplinaria, 
     DiagnosticoArea, SeguimientoTrimestral
@@ -1259,3 +1260,16 @@ class TurnoForm(forms.ModelForm):
                 self.add_error('hora_inicio', "El profesional ya tiene un turno en ese horario.")
         
         return cleaned_data
+
+
+class CustomLoginForm(AuthenticationForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['username'].widget.attrs.update({
+            'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
+            'placeholder': 'Nombre de usuario'
+        })
+        self.fields['password'].widget.attrs.update({
+            'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
+            'placeholder': 'Contraseña'
+        })

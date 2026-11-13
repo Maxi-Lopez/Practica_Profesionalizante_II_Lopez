@@ -164,9 +164,12 @@ class HomeView(TemplateView):
         return context
 
 
+from core.forms import CustomLoginForm
+
 class CustomLoginView(LoginView):
     template_name = 'registration/login.html'
     redirect_authenticated_user = True
+    form_class = CustomLoginForm
     
     def get_success_url(self):
         return reverse_lazy('home')
