@@ -18,6 +18,20 @@
                 </svg>
                 Imprimir Factura
             </a>
+            <button type="button" onclick="document.getElementById('pagos-modal').showModal()" 
+               class="px-4 py-2 border border-gray-300 rounded-lg font-medium hover:bg-gray-50 transition-colors text-center whitespace-nowrap flex items-center justify-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599 1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                Ver Historial de Pagos
+            </button>
+            <a href="{% url 'facturacion_list' %}?search={{ factura.paciente.persona.dni }}" 
+               class="px-4 py-2 border border-gray-300 rounded-lg font-medium hover:bg-gray-50 transition-colors text-center whitespace-nowrap flex items-center justify-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599 1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                Ver Historial de Facturas
+            </a>
             <a href="{% url 'facturacion_list' %}" 
                class="px-4 py-2 border border-gray-300 rounded-lg font-medium hover:bg-gray-50 transition-colors text-center whitespace-nowrap">
                 Volver al listado
@@ -185,4 +199,59 @@
         </div>
     </div>
 </div>
+
+    <!-- Modal: Historial de Pagos del Concurrente -->
+    <dialog id="pagos-modal" class="modal">
+        <div class="modal-box max-w-3xl w-full">
+            <form method="dialog" class="flex justify-end pr-2 pb-2">
+                <button class="btn btn-sm btn-ghost">✕</button>
+            </form>
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-900">Historial de Pagos - {{ factura.paciente.persona.nombre }} {{ factura.paciente.persona.apellido }}</h3>
+                <a href="{% url 'facturacion_list' %}?search={{ factura.paciente.persona.dni }}" 
+                   class="text-sm text-primary-600 hover:underline" target="_blank">
+                    Ver historial completo →
+                </a>
+            </div>
+            <div class="overflow-x-auto max-h-96">
+                <table class="w-full">
+                    <thead class="bg-gray-50 border-b border-gray-200 sticky top-0">
+                        <tr>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                            <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Monto</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Factura</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Medio de Pago</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Referencia</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        {% for pago in factura.pagos.all %}
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-700">{{ pago.fecha|date:"d/m/Y H:i" }}</td>
+                            <td class="px-4 py-2 whitespace-nowrap text-right text-sm font-medium text-gray-900">${{ pago.monto|floatformat:2 }}</td>
+                            <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-700">{{ pago.factura.numero_factura }}</td>
+                            <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-700">{{ pago.get_medio_pago_display }}</td>
+                            <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-700">{{ pago.referencia|default:"—" }}</td>
+                            <td class="px-4 py-2 whitespace-nowrap">
+                                {% if pago.anulado %}
+                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">Anulado</span>
+                                {% else %}
+                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">Válido</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="px-4 py-8 text-center text-gray-500">Sin pagos registrados en esta factura</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <form method="dialog" class="modal-backdrop">
+            <button>Cerrar</button>
+        </form>
+    </dialog>
 {% endblock %}
