@@ -451,7 +451,9 @@ class PacientesListView(LoginRequiredMixin, TemplateView):
             )
         
         from django.utils import timezone
+        from datetime import timedelta
         context['today'] = timezone.now().date()
+        context['today_plus_30'] = timezone.now().date() + timedelta(days=30)
         
         return context
 
