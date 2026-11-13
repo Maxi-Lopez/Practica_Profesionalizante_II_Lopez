@@ -72,22 +72,30 @@
             
             <!-- Stats Section (Admin) -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-                <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-                    <p class="text-sm text-gray-500">Total Concurrentes</p>
-                    <p class="text-3xl font-bold text-primary-600 mt-1">{% if pacientes_count %}{{ pacientes_count }}{% else %}—{% endif %}</p>
-                </div>
-                <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-                    <p class="text-sm text-gray-500">Turnos Hoy</p>
-                    <p class="text-3xl font-bold text-accent-600 mt-1">{% if turnos_hoy_count %}{{ turnos_hoy_count }}{% else %}—{% endif %}</p>
-                </div>
-                <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-                    <p class="text-sm text-gray-500">Tratamientos Activos</p>
-                    <p class="text-3xl font-bold text-green-600 mt-1">{% if tratamientos_count %}{{ tratamientos_count }}{% else %}—{% endif %}</p>
-                </div>
-                <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-                    <p class="text-sm text-gray-500">Empleados</p>
-                    <p class="text-3xl font-bold text-gray-700 mt-1">{% if empleados_count %}{{ empleados_count }}{% else %}—{% endif %}</p>
-                </div>
+                <a href="{% url 'pacientes_list' %}" class="block hover:shadow-md transition-shadow cursor-pointer">
+                    <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                        <p class="text-sm text-gray-500">Total Concurrentes</p>
+                        <p class="text-3xl font-bold text-primary-600 mt-1">{% if pacientes_count %}{{ pacientes_count }}{% else %}—{% endif %}</p>
+                    </div>
+                </a>
+                <a href="{% url 'turnos_list' %}" class="block hover:shadow-md transition-shadow cursor-pointer">
+                    <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                        <p class="text-sm text-gray-500">Turnos Hoy</p>
+                        <p class="text-3xl font-bold text-accent-600 mt-1">{% if turnos_hoy_count %}{{ turnos_hoy_count }}{% else %}—{% endif %}</p>
+                    </div>
+                </a>
+                <a href="{% url 'planes_list' %}" class="block hover:shadow-md transition-shadow cursor-pointer">
+                    <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                        <p class="text-sm text-gray-500">Tratamientos Activos</p>
+                        <p class="text-3xl font-bold text-green-600 mt-1">{% if tratamientos_count %}{{ tratamientos_count }}{% else %}—{% endif %}</p>
+                    </div>
+                </a>
+                <a href="{% url 'empleados_list' %}" class="block hover:shadow-md transition-shadow cursor-pointer">
+                    <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                        <p class="text-sm text-gray-500">Empleados</p>
+                        <p class="text-3xl font-bold text-gray-700 mt-1">{% if empleados_count %}{{ empleados_count }}{% else %}—{% endif %}</p>
+                    </div>
+                </a>
             </div>
 
             <!-- CUD Alert Banner -->
