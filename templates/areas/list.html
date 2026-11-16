@@ -49,24 +49,24 @@
                             <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-200">
+<tbody class="divide-y divide-gray-200" id="areas-tbody">
                         {% for area in areas %}
-                            <tr class="hover:bg-gray-50 cursor-pointer" data-id="{{ area.pk }}">
+                            <tr class="hover:bg-gray-50 cursor-pointer" data-href="{% url 'area_detail' area.pk %}">
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ area.get_nombre_display }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-700 max-w-xs truncate">{{ area.descripcion|default:"—" }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     {% if area.activo %}
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Activo</span>
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Activo</span>
                                     {% else %}
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Inactivo</span>
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Inactivo</span>
                                     {% endif %}
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                     {% if perms.pacientes.change_areainterdisciplinaria %}
-                                    <a href="{% url 'area_update' area.pk %}" class="text-primary-600 hover:text-primary-900 mr-3">Editar</a>
+                                    <a href="{% url 'area_update' area.pk %}" onclick="event.stopPropagation()" class="text-primary-600 hover:text-primary-900 mr-3">Editar</a>
                                     {% endif %}
                                     {% if perms.pacientes.delete_areainterdisciplinaria %}
-                                    <form action="{% url 'area_delete' area.pk %}" method="post" class="inline" onsubmit="return confirm('¿Está seguro de que desea dar de baja a esta área?');">
+                                    <form action="{% url 'area_delete' area.pk %}" method="post" class="inline" onsubmit="event.stopPropagation(); return confirm('¿Está seguro de que desea dar de baja a esta área?');">
                                         {% csrf_token %}
                                         <button type="submit" class="text-red-600 hover:text-red-900">Eliminar</button>
                                     </form>
@@ -103,6 +103,7 @@
 document.addEventListener('DOMContentLoaded', function() {
     const input = document.getElementById('search-input-areas');
     const container = document.getElementById('tabla-areas-container');
+    const tbody = document.getElementById('areas-tbody');
 
     if (!input || !container) return;
 
@@ -143,6 +144,20 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }, 300);
     });
+
+    // Event delegation for clickable rows
+    if (tbody) {
+        tbody.addEventListener('click', function(e) {
+            // Ignore clicks on links, buttons, forms
+            if (e.target.closest('a, button, form, input, select, textarea')) {
+                return;
+            }
+            const row = e.target.closest('tr[data-href]');
+            if (row) {
+                window.location.href = row.dataset.href;
+            }
+        });
+    }
 });
 </script>
 {% endblock %}

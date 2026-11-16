@@ -1,0 +1,170 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ area.get_nombre_display }} - Centro de Día Proyectar{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">{{ area.get_nombre_display }}</h1>
+            <p class="text-gray-600 mt-1">Detalle del área interdisciplinaria</p>
+        </div>
+        <a href="{% url 'areas_list' %}" class="text-primary-600 hover:text-primary-800 font-medium flex items-center whitespace-nowrap">
+            <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+            </svg>
+            Volver al listado
+        </a>
+    </div>
+
+    <!-- Área Info Card -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 mb-6">
+        <div class="p-6 border-b border-gray-100">
+            <h2 class="text-lg font-semibold text-gray-900">Información del Área</h2>
+        </div>
+        <div class="p-6">
+            <dl class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Nombre</dt>
+                    <dd class="mt-1 text-sm text-gray-900">{{ area.get_nombre_display }}</dd>
+                </div>
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Descripción</dt>
+                    <dd class="mt-1 text-sm text-gray-700">{{ area.descripcion|default:"—" }}</dd>
+                </div>
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Estado</dt>
+                    <dd class="mt-1 text-sm text-gray-900">
+                        {% if area.activo %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Activo</span>
+                        {% else %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Inactivo</span>
+                        {% endif %}
+                    </dd>
+                </div>
+            </dl>
+        </div>
+    </div>
+
+    <!-- Profesionales Asignados -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100">
+        <div class="p-6 border-b border-gray-100">
+            <h2 class="text-lg font-semibold text-gray-900">Profesionales Asignados</h2>
+        </div>
+        <div class="p-6">
+            {% if profesionales %}
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-50 border-b border-gray-200">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rol</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200" id="profesionales-tbody">
+                        {% for prof in profesionales %}
+                        <tr class="hover:bg-gray-50 {% if user.is_superuser or user.rol == 'admin' %}cursor-pointer{% endif %}" 
+                            data-prof-id="{{ prof.id }}"
+                            data-prof-name="{{ prof.get_full_name|default:prof.username }}"
+                            data-prof-email="{{ prof.email|default:'—' }}"
+                            data-prof-rol="{{ prof.get_rol_display }}"
+                            data-prof-area="{{ prof.area.get_nombre_display|default:'—' }}">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm font-medium text-gray-900">{{ prof.get_full_name|default:prof.username }}</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ prof.email|default:"—" }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800">{{ prof.get_rol_display }}</span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Modals for Admin/Superuser (outside table) -->
+            {% if user.is_superuser or user.rol == 'admin' %}
+            {% for prof in profesionales %}
+            <dialog id="modal-profesional-{{ prof.id }}" class="p-0 rounded-xl shadow-2xl backdrop:bg-black/50 w-full max-w-md border-0">
+                <div class="bg-white p-6 rounded-xl relative">
+                    <!-- Botón de cerrar X arriba a la derecha -->
+                    <button type="button" onclick="document.getElementById('modal-profesional-{{ prof.id }}').close()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+
+                    <h2 class="text-xl font-bold text-gray-900 mb-4">{{ prof.get_full_name|default:prof.username }}</h2>
+                    
+                    <div class="space-y-3 text-sm">
+                        <div class="flex justify-between border-b border-gray-100 pb-2">
+                            <span class="text-gray-500">Email</span>
+                            <span class="font-medium text-gray-900">{{ prof.email|default:"—" }}</span>
+                        </div>
+                        <div class="flex justify-between border-b border-gray-100 pb-2">
+                            <span class="text-gray-500">Rol</span>
+                            <span class="font-medium text-gray-900">{{ prof.get_rol_display }}</span>
+                        </div>
+                        <div class="flex justify-between border-b border-gray-100 pb-2">
+                            <span class="text-gray-500">Área</span>
+                            <span class="font-medium text-gray-900">{{ prof.area.get_nombre_display|default:"Sin área" }}</span>
+                        </div>
+                        <div class="flex justify-between pb-2">
+                            <span class="text-gray-500">Usuario</span>
+                            <span class="font-medium text-gray-900">{{ prof.username }}</span>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-100">
+                        <button type="button" onclick="document.getElementById('modal-profesional-{{ prof.id }}').close()" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors">
+                            Volver
+                        </button>
+                        <a href="{% url 'usuario_update' prof.id %}" class="px-4 py-2 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-colors">
+                            Editar Profesional
+                        </a>
+                    </div>
+                </div>
+            </dialog>
+            {% endfor %}
+            {% endif %}
+            {% else %}
+            <div class="p-12 text-center">
+                <svg class="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                </svg>
+                <h3 class="text-lg font-medium text-gray-900 mb-1">No hay profesionales asignados a esta área</h3>
+                <p class="text-gray-500">Los usuarios con rol profesional pueden ser asignados a esta área desde la gestión de usuarios.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+{% if user.is_superuser or user.rol == 'admin' %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const tbody = document.getElementById('profesionales-tbody');
+    if (!tbody) return;
+
+    // Event delegation for clickable rows to open modal
+    tbody.addEventListener('click', function(e) {
+        // Ignore clicks on links, buttons, forms inside the row
+        if (e.target.closest('a, button, form, input, select, textarea, dialog')) {
+            return;
+        }
+        const row = e.target.closest('tr[data-prof-id]');
+        if (row) {
+            const profId = row.dataset.profId;
+            const modal = document.getElementById('modal-profesional-' + profId);
+            if (modal) {
+                modal.showModal();
+            }
+        }
+    });
+});
+</script>
+{% endif %}
+{% endblock %}

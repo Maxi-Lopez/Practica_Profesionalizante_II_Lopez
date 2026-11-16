@@ -237,17 +237,23 @@ class PacienteForm(forms.ModelForm):
             telefono_numero = self.cleaned_data.get('telefono')
             if telefono_numero:
                 from personas.models import Telefono
-                telefono, _ = Telefono.objects.get_or_create(persona=persona, defaults={'tipo': 'CELULAR', 'es_principal': True})
-                telefono.numero = telefono_numero
-                telefono.save()
+                telefono = Telefono.objects.filter(persona=persona).first()
+                if telefono:
+                    telefono.numero = telefono_numero
+                    telefono.save()
+                else:
+                    Telefono.objects.create(persona=persona, numero=telefono_numero, tipo='CELULAR', es_principal=True, activo=True)
             
             # Update email
             email_direccion = self.cleaned_data.get('email')
             if email_direccion:
                 from personas.models import Email
-                email, _ = Email.objects.get_or_create(persona=persona, defaults={'tipo': 'PERSONAL', 'es_principal': True})
-                email.direccion_email = email_direccion
-                email.save()
+                email = Email.objects.filter(persona=persona).first()
+                if email:
+                    email.direccion_email = email_direccion
+                    email.save()
+                else:
+                    Email.objects.create(persona=persona, direccion_email=email_direccion, tipo='PERSONAL', es_principal=True, activo=True)
             
             # Update foto
             foto = self.cleaned_data.get('foto')
@@ -471,17 +477,23 @@ class EmpleadoForm(forms.ModelForm):
             telefono_numero = self.cleaned_data.get('telefono')
             if telefono_numero:
                 from personas.models import Telefono
-                telefono, _ = Telefono.objects.get_or_create(persona=persona, defaults={'tipo': 'CELULAR', 'es_principal': True})
-                telefono.numero = telefono_numero
-                telefono.save()
+                telefono = Telefono.objects.filter(persona=persona).first()
+                if telefono:
+                    telefono.numero = telefono_numero
+                    telefono.save()
+                else:
+                    Telefono.objects.create(persona=persona, numero=telefono_numero, tipo='CELULAR', es_principal=True, activo=True)
             
             # Update email
             email_direccion = self.cleaned_data.get('email')
             if email_direccion:
                 from personas.models import Email
-                email, _ = Email.objects.get_or_create(persona=persona, defaults={'tipo': 'PERSONAL', 'es_principal': True})
-                email.direccion_email = email_direccion
-                email.save()
+                email = Email.objects.filter(persona=persona).first()
+                if email:
+                    email.direccion_email = email_direccion
+                    email.save()
+                else:
+                    Email.objects.create(persona=persona, direccion_email=email_direccion, tipo='PERSONAL', es_principal=True, activo=True)
             
             # Update foto
             foto = self.cleaned_data.get('foto')
