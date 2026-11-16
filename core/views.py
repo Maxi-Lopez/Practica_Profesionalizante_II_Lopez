@@ -624,9 +624,27 @@ class TurnosListView(LoginRequiredMixin, TemplateView):
         logger = logging.getLogger(__name__)
         user = self.request.user
         
+        # Parámetro historial: si es 1, muestra historial (pasados); sino, próximos (hoy en adelante)
+        historial = self.request.GET.get('historial') == '1'
+        hoy = timezone.now().date()
+        ahora = timezone.now().time()
+        
         base_qs = Turno.objects.select_related(
             'paciente__persona', 'profesional__persona', 'servicio'
-        ).exclude(estado=EstadoTurno.CANCELADO).order_by('fecha', 'hora_inicio')
+        ).order_by('fecha', 'hora_inicio')
+        
+        if historial:
+            # Historial: turnos pasados (fecha < hoy) O turnos de hoy ya pasados O cancelados/ausentes
+            base_qs = base_qs.filter(
+                Q(fecha__lt=hoy) | 
+                Q(fecha=hoy, hora_inicio__lt=ahora) |
+                Q(estado__in=[EstadoTurno.CANCELADO, EstadoTurno.AUSENTE])
+            )
+        else:
+            # Próximos: turnos de hoy en adelante, excluyendo cancelados
+            base_qs = base_qs.exclude(estado=EstadoTurno.CANCELADO).filter(
+                Q(fecha__gt=hoy) | Q(fecha=hoy, hora_inicio__gte=ahora)
+            )
         
         if user.is_superuser or user.rol in ['admin', 'orientador', 'recepcionista']:
             context['turnos'] = base_qs
@@ -678,6 +696,7 @@ class TurnosListView(LoginRequiredMixin, TemplateView):
                 logger.warning(f"No se encontró Empleado para usuario {user.username} (email: {user.email}, rol: {user.rol})")
         
         context['hoy'] = timezone.now().date()
+        context['historial'] = historial
         
         # Generar slots de hora (00:00 a 23:30 en intervalos de 30 min)
         time_slots = []
