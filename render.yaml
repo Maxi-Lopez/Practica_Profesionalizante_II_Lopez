@@ -4,7 +4,7 @@
 
 services:
   - type: web
-    name: centro-salud-api
+    name: centro-proyectar
     runtime: docker
     dockerfilePath: ./Dockerfile
     dockerContext: .
