@@ -474,6 +474,8 @@ class PacientesListView(LoginRequiredMixin, TemplateView):
         from pacientes.models import Paciente
         from personas.models import Email
         from django.db.models import Q
+        from django.utils import timezone
+        from datetime import timedelta
         user = self.request.user
         
         base_qs = Paciente.objects.select_related('persona', 'obra_social').filter(activo=True).order_by('-fecha_ingreso')
@@ -517,15 +519,23 @@ class PacientesListView(LoginRequiredMixin, TemplateView):
         # Aplicar filtro de búsqueda
         search = self.request.GET.get('search', '').strip()
         if search:
-            from django.db.models import Q
             context['pacientes'] = context['pacientes'].filter(
                 Q(persona__nombre__icontains=search) |
                 Q(persona__apellido__icontains=search) |
                 Q(persona__dni__icontains=search)
             )
         
-        from django.utils import timezone
-        from datetime import timedelta
+        # Aplicar filtro de alerta CUD
+        cud_alerta = self.request.GET.get('cud_alerta')
+        if cud_alerta:
+            hoy = timezone.now().date()
+            limite = hoy + timedelta(days=30)
+            context['pacientes'] = context['pacientes'].filter(
+                fecha_vencimiento_cud__isnull=False,
+                fecha_vencimiento_cud__lte=limite
+            )
+            context['cud_alerta_active'] = True
+        
         context['today'] = timezone.now().date()
         context['today_plus_30'] = timezone.now().date() + timedelta(days=30)
         
