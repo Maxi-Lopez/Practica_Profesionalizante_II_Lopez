@@ -3,7 +3,8 @@ FROM python:3.12-slim
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     DJANGO_SETTINGS_MODULE=config.settings.production \
-    UV_PYTHON_DOWNLOADS=never
+    UV_PYTHON_DOWNLOADS=never \
+    UV_PYTHON=3.12
 
 WORKDIR /app
 
@@ -18,4 +19,4 @@ COPY . .
 
 EXPOSE 8000
 
-CMD ["sh", "-c", "uv run python manage.py collectstatic --no-input && uv run python manage.py migrate && .venv/bin/gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3"]
+CMD ["sh", "-c", "uv run python manage.py collectstatic --no-input && uv run python manage.py migrate && uv run gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3"]
