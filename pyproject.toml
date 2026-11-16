@@ -21,6 +21,7 @@ dependencies = [
     "boto3>=1.43.127",
     "dj-database-url>=2.3.0",
     "whitenoise>=6.6.0",
+    "gunicorn>=22.0",
 ]
 
 [project.scripts]
