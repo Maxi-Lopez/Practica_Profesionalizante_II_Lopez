@@ -49,9 +49,9 @@ wheels = [
 ]
 
 [[package]]
-name = "centro-salud-api"
+name = "centro-proyectar"
 version = "0.1.0"
-source = { editable = "." }
+source = { virtual = "." }
 dependencies = [
     { name = "boto3" },
     { name = "dj-database-url" },
