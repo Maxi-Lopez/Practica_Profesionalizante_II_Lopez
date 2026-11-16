@@ -51,7 +51,7 @@ Sistema **Full-Stack (Django MVT + API REST)** para la gestión integral del Cen
 
 ```bash
 # 1. Clonar y entrar
-git clone <repo-url>
+git clone https://github.com/Maxi-Lopez/Practica_Profesionalizante_II_Lopez.git
 cd centro_salud_api
 
 # 2. Instalar dependencias con uv
