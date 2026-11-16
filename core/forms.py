@@ -1,12 +1,15 @@
+from datetime import datetime
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm
+from django.db.models import Q
+from django.utils import timezone
 from pacientes.models import (
     Paciente, ObraSocial, Sala, AreaInterdisciplinaria, 
     DiagnosticoArea, SeguimientoTrimestral
 )
-from empleados.models import Empleado, Rol
+from empleados.models import Empleado, Rol, EmpleadoRol
 from documentos.models import Documento
-from personas.models import Persona, Localidad
+from personas.models import Persona, Localidad, Telefono, Email
 from compras.models import Proveedor, Compra, DetalleCompra, TipoGasto, Gasto
 from inventario.models import Producto
 from tratamientos.models import (
@@ -165,7 +168,6 @@ class PacienteForm(forms.ModelForm):
             raise forms.ValidationError("El DNI no puede tener más de 10 dígitos.")
         
         # Verificar duplicado (excluyendo la instancia actual en edición)
-        from personas.models import Persona
         qs = Persona.objects.filter(dni=dni)
         if self.instance and self.instance.pk and self.instance.persona:
             qs = qs.exclude(pk=self.instance.persona.pk)
@@ -176,7 +178,6 @@ class PacienteForm(forms.ModelForm):
     def clean_fecha_nacimiento(self):
         fecha = self.cleaned_data.get('fecha_nacimiento')
         if fecha:
-            from django.utils import timezone
             if fecha > timezone.now().date():
                 raise forms.ValidationError("La fecha de nacimiento no puede ser futura.")
         return fecha
@@ -186,7 +187,6 @@ class PacienteForm(forms.ModelForm):
         dni = cleaned_data.get('dni')
         if dni:
             # Validación adicional de DNI único a nivel de formulario
-            from personas.models import Persona
             qs = Persona.objects.filter(dni=dni)
             if self.instance and self.instance.pk and self.instance.persona:
                 qs = qs.exclude(pk=self.instance.persona.pk)
@@ -207,7 +207,6 @@ class PacienteForm(forms.ModelForm):
 
         # Validar que fecha_vencimiento_cud no sea pasada
         if fecha_vencimiento_cud:
-            from django.utils import timezone
             if fecha_vencimiento_cud < timezone.now().date():
                 self.add_error('fecha_vencimiento_cud', "La fecha de vencimiento del CUD no puede ser una fecha pasada.")
 
@@ -236,7 +235,6 @@ class PacienteForm(forms.ModelForm):
             # Update phone
             telefono_numero = self.cleaned_data.get('telefono')
             if telefono_numero:
-                from personas.models import Telefono
                 telefono = Telefono.objects.filter(persona=persona).first()
                 if telefono:
                     telefono.numero = telefono_numero
@@ -247,7 +245,6 @@ class PacienteForm(forms.ModelForm):
             # Update email
             email_direccion = self.cleaned_data.get('email')
             if email_direccion:
-                from personas.models import Email
                 email = Email.objects.filter(persona=persona).first()
                 if email:
                     email.direccion_email = email_direccion
@@ -403,7 +400,6 @@ class EmpleadoForm(forms.ModelForm):
             raise forms.ValidationError("El DNI no puede tener más de 10 dígitos.")
         
         # Verificar duplicado (excluyendo la instancia actual en edición)
-        from personas.models import Persona
         qs = Persona.objects.filter(dni=dni)
         if self.instance and self.instance.pk and self.instance.persona:
             qs = qs.exclude(pk=self.instance.persona.pk)
@@ -414,7 +410,6 @@ class EmpleadoForm(forms.ModelForm):
     def clean_fecha_nacimiento(self):
         fecha = self.cleaned_data.get('fecha_nacimiento')
         if fecha:
-            from django.utils import timezone
             if fecha > timezone.now().date():
                 raise forms.ValidationError("La fecha de nacimiento no puede ser futura.")
         return fecha
@@ -422,7 +417,6 @@ class EmpleadoForm(forms.ModelForm):
     def clean_matricula(self):
         matricula = self.cleaned_data.get('matricula', '').strip()
         if matricula:
-            from empleados.models import Empleado
             qs = Empleado.objects.filter(matricula=matricula)
             if self.instance and self.instance.pk:
                 qs = qs.exclude(pk=self.instance.pk)
@@ -435,7 +429,6 @@ class EmpleadoForm(forms.ModelForm):
         dni = cleaned_data.get('dni')
         if dni:
             # Validación adicional de DNI único a nivel de formulario
-            from personas.models import Persona
             qs = Persona.objects.filter(dni=dni)
             if self.instance and self.instance.pk and self.instance.persona:
                 qs = qs.exclude(pk=self.instance.persona.pk)
@@ -444,7 +437,6 @@ class EmpleadoForm(forms.ModelForm):
         
         matricula = cleaned_data.get('matricula')
         if matricula:
-            from empleados.models import Empleado
             qs = Empleado.objects.filter(matricula=matricula)
             if self.instance and self.instance.pk:
                 qs = qs.exclude(pk=self.instance.pk)
@@ -476,7 +468,6 @@ class EmpleadoForm(forms.ModelForm):
             # Update phone
             telefono_numero = self.cleaned_data.get('telefono')
             if telefono_numero:
-                from personas.models import Telefono
                 telefono = Telefono.objects.filter(persona=persona).first()
                 if telefono:
                     telefono.numero = telefono_numero
@@ -487,7 +478,6 @@ class EmpleadoForm(forms.ModelForm):
             # Update email
             email_direccion = self.cleaned_data.get('email')
             if email_direccion:
-                from personas.models import Email
                 email = Email.objects.filter(persona=persona).first()
                 if email:
                     email.direccion_email = email_direccion
@@ -507,7 +497,6 @@ class EmpleadoForm(forms.ModelForm):
             # Update roles
             roles = self.cleaned_data.get('roles')
             if roles is not None:
-                from empleados.models import EmpleadoRol
                 # Desactivar roles existentes no en la nueva lista
                 EmpleadoRol.objects.filter(empleado=empleado).exclude(rol__in=roles).update(activo=False)
                 # Crear o activar roles seleccionados
@@ -903,7 +892,6 @@ class GastoForm(forms.ModelForm):
         return monto
 
     def clean_fecha(self):
-        from django.utils import timezone
         fecha = self.cleaned_data.get('fecha')
         if fecha and fecha > timezone.now().date():
             raise forms.ValidationError("La fecha no puede ser futura.")
@@ -1251,14 +1239,11 @@ class TurnoForm(forms.ModelForm):
             self.add_error('hora_fin', "La hora de fin debe ser posterior a la hora de inicio.")
         
         if fecha and hora_inicio and not self.instance.pk:
-            from django.utils import timezone
-            from datetime import datetime
             turno_datetime = timezone.make_aware(datetime.combine(fecha, hora_inicio))
             if turno_datetime < timezone.now():
                 self.add_error('fecha', "No se puede agendar un turno en el pasado.")
         
         if fecha and hora_inicio and hora_fin and profesional:
-            from django.db.models import Q
             solapamiento = Turno.objects.filter(
                 profesional=profesional,
                 fecha=fecha,

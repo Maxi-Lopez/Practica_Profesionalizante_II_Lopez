@@ -3,15 +3,17 @@ from django.contrib.auth.views import LoginView, LogoutView
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login
 from django.contrib import messages
 from django.urls import reverse_lazy
 from django.utils import timezone
 from django.db import models
-from datetime import timedelta
-from django.core.exceptions import PermissionDenied
+from django.db.models import Q
 from django.http import JsonResponse
+from django.core.exceptions import PermissionDenied
+from datetime import datetime, timedelta
+import logging
 
 from usuarios.models import Usuario
 from usuarios.forms import UsuarioAdminForm
@@ -21,6 +23,12 @@ from pacientes.models import Sala, AreaInterdisciplinaria, DiagnosticoArea, Segu
 from turnos.models import Turno, EstadoTurno
 from compras.models import Proveedor, Compra, TipoGasto, Gasto
 from tratamientos.models import PlanTratamiento, ObjetivoTratamiento, ActividadPlan, HistorialMedico, EvolucionSemanal, RegistroActividad, NotaImportante
+from personas.models import Email
+from servicios.models import Servicio
+from empleados.models import Empleado
+from facturacion.models import FacturaVenta, EstadoFactura
+from inventario.models import Producto
+from documentos.models import Documento
 
 
 def health_check(request):
@@ -45,13 +53,6 @@ class HomeView(TemplateView):
         context = super().get_context_data(**kwargs)
         if self.request.user.is_authenticated:
             # Contar estadísticas para el dashboard
-            from pacientes.models import Paciente
-            from turnos.models import Turno, EstadoTurno
-            from tratamientos.models import PlanTratamiento
-            from empleados.models import Empleado
-            from django.utils import timezone
-            from django.db import models
-            
             user = self.request.user
             hoy = timezone.now().date()
             
@@ -302,7 +303,6 @@ class PacienteDetailView(LoginRequiredMixin, DetailView):
         context['planes'] = paciente.planes_tratamiento.filter(activo=True).order_by('-fecha_inicio')
         
         # Objetivos
-        from tratamientos.models import ObjetivoTratamiento
         context['objetivos'] = ObjetivoTratamiento.objects.filter(
             plan_tratamiento__paciente=paciente,
             plan_tratamiento__activo=True,
@@ -310,7 +310,6 @@ class PacienteDetailView(LoginRequiredMixin, DetailView):
         ).select_related('plan_tratamiento').order_by('-fecha_creacion')
         
         # Actividades
-        from tratamientos.models import ActividadPlan
         context['actividades'] = ActividadPlan.objects.filter(
             plan_tratamiento__paciente=paciente,
             plan_tratamiento__activo=True,
@@ -471,11 +470,6 @@ class PacientesListView(LoginRequiredMixin, TemplateView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        from pacientes.models import Paciente
-        from personas.models import Email
-        from django.db.models import Q
-        from django.utils import timezone
-        from datetime import timedelta
         user = self.request.user
         
         base_qs = Paciente.objects.select_related('persona', 'obra_social').filter(activo=True).order_by('-fecha_ingreso')
@@ -576,7 +570,6 @@ class PacienteUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView
         return ('pacientes.change_paciente',)
     
     def get_object(self, queryset=None):
-        from pacientes.models import Paciente
         return Paciente.objects.select_related('persona').get(pk=self.kwargs['pk'])
     
     def form_valid(self, form):
@@ -597,7 +590,6 @@ class PacienteDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView
         return ('pacientes.delete_paciente',)
     
     def get_object(self, queryset=None):
-        from pacientes.models import Paciente
         return Paciente.objects.select_related('persona').get(pk=self.kwargs['pk'])
     
     def delete(self, request, *args, **kwargs):
@@ -611,13 +603,6 @@ class TurnosListView(LoginRequiredMixin, TemplateView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        from turnos.models import Turno, EstadoTurno
-        from servicios.models import Servicio
-        from pacientes.models import Paciente
-        from empleados.models import Empleado
-        from django.utils import timezone
-        from django.db.models import Q
-        import logging
         logger = logging.getLogger(__name__)
         user = self.request.user
         
@@ -711,14 +696,6 @@ class TurnosListView(LoginRequiredMixin, TemplateView):
         return None
     
     def post(self, request, *args, **kwargs):
-        from turnos.models import Turno, EstadoTurno
-        from pacientes.models import Paciente
-        from servicios.models import Servicio
-        from empleados.models import Empleado
-        from django.utils import timezone
-        from django.db.models import Q
-        from django.contrib import messages
-        from datetime import datetime
         
         action = request.POST.get('action')
         if action not in ['crear_turno', 'editar_turno']:
@@ -844,12 +821,6 @@ def turnos_disponibilidad(request):
     Endpoint para verificar disponibilidad de horarios para un profesional en una fecha.
     GET /api/turnos/disponibles/?fecha=YYYY-MM-DD&hora_inicio=HH:MM&hora_fin=HH:MM&profesional_id=X
     """
-    from turnos.models import Turno, EstadoTurno
-    from empleados.models import Empleado
-    from django.http import JsonResponse
-    from django.db.models import Q
-    from datetime import datetime, timedelta
-    
     fecha = request.GET.get('fecha')
     hora_inicio = request.GET.get('hora_inicio')
     hora_fin = request.GET.get('hora_fin')
@@ -947,10 +918,6 @@ class TurnoUpdateView(LoginRequiredMixin, UpdateView):
 @login_required
 @require_POST
 def cambiar_estado_turno(request, pk, nuevo_estado):
-    from turnos.models import Turno, EstadoTurno
-    from django.shortcuts import get_object_or_404, redirect
-    from django.contrib import messages
-    
     turno = get_object_or_404(Turno, pk=pk)
     
     # Validar permisos
@@ -986,7 +953,6 @@ class EmpleadosListView(SoloAdminMixin, LoginRequiredMixin, TemplateView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        from empleados.models import Empleado
         context['empleados'] = Empleado.objects.select_related('persona').filter(activo=True).order_by('persona__apellido')
         return context
 
@@ -997,7 +963,6 @@ class ServiciosListView(LoginRequiredMixin, TemplateView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        from servicios.models import Servicio
         context['servicios'] = Servicio.objects.select_related('tipo_servicio').filter(activo=True).order_by('tipo_servicio__nombre', 'nombre')
         return context
 
@@ -1008,7 +973,6 @@ class FacturacionListView(LoginRequiredMixin, TemplateView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        from facturacion.models import FacturaVenta, EstadoFactura
         context['facturas'] = FacturaVenta.objects.select_related('paciente__persona', 'obra_social').exclude(estado=EstadoFactura.ANULADA).order_by('-fecha')
         return context
 
@@ -1037,7 +1001,6 @@ class FacturaDetailView(LoginRequiredMixin, DetailView):
         raise PermissionDenied("No tiene permiso para ver facturas.")
 
     def get_queryset(self):
-        from facturacion.models import FacturaVenta, EstadoFactura
         user = self.request.user
         base_qs = FacturaVenta.objects.select_related(
             'paciente__persona', 'obra_social'
@@ -1048,7 +1011,6 @@ class FacturaDetailView(LoginRequiredMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        from django.utils import timezone
         context['fecha_impresion'] = timezone.now()
         context['usuario_impresion'] = self.request.user.get_full_name() or self.request.user.username
         return context
@@ -1074,7 +1036,6 @@ class FacturaPrintView(LoginRequiredMixin, DetailView):
         raise PermissionDenied("No tiene permiso para imprimir facturas.")
 
     def get_queryset(self):
-        from facturacion.models import FacturaVenta, EstadoFactura
         user = self.request.user
         base_qs = FacturaVenta.objects.select_related(
             'paciente__persona', 'obra_social'
@@ -1085,7 +1046,6 @@ class FacturaPrintView(LoginRequiredMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        from django.utils import timezone
         context['fecha_impresion'] = timezone.now()
         context['usuario_impresion'] = self.request.user.get_full_name() or self.request.user.username
         return context
@@ -1097,7 +1057,6 @@ class InventarioListView(LoginRequiredMixin, TemplateView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        from inventario.models import Producto
         context['productos'] = Producto.objects.select_related('categoria').filter(activo=True).order_by('nombre')
         return context
 
@@ -1108,7 +1067,6 @@ class ComprasListView(SoloAdminMixin, LoginRequiredMixin, TemplateView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        from compras.models import Compra
         context['compras'] = Compra.objects.select_related('proveedor').filter(anulada=False).order_by('-fecha')
         return context
 
@@ -1119,7 +1077,6 @@ class DocumentosListView(LoginRequiredMixin, TemplateView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        from documentos.models import Documento
         context['documentos'] = Documento.objects.select_related('persona').filter(activo=True).order_by('-fecha_creacion')
         return context
 
@@ -1161,7 +1118,6 @@ class EmpleadoUpdateView(SoloAdminMixin, LoginRequiredMixin, PermissionRequiredM
         return ('empleados.change_empleado',)
     
     def get_object(self, queryset=None):
-        from empleados.models import Empleado
         return Empleado.objects.select_related('persona').get(pk=self.kwargs['pk'])
     
     def form_valid(self, form):
@@ -1182,7 +1138,6 @@ class EmpleadoDeleteView(SoloAdminMixin, LoginRequiredMixin, PermissionRequiredM
         return ('empleados.delete_empleado',)
     
     def get_object(self, queryset=None):
-        from empleados.models import Empleado
         return Empleado.objects.select_related('persona').get(pk=self.kwargs['pk'])
     
     def delete(self, request, *args, **kwargs):
@@ -1227,9 +1182,8 @@ class DocumentoUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateVie
         return ('documentos.change_documento',)
 
     def get_object(self, queryset=None):
-        from documentos.models import Documento
         return Documento.objects.filter(activo=True).get(pk=self.kwargs['pk'])
-
+    
     def form_valid(self, form):
         messages.success(self.request, 'Documento actualizado exitosamente.')
         return super().form_valid(form)
@@ -1241,14 +1195,13 @@ class DocumentoDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteVie
     login_url = 'login'
     permission_required = 'documentos.delete_documento'
     pk_url_kwarg = 'pk'
-
+    
     def get_permission_required(self):
         if self.request.user.is_superuser:
             return ()
         return ('documentos.delete_documento',)
-
+    
     def get_object(self, queryset=None):
-        from documentos.models import Documento
         return Documento.objects.filter(activo=True).get(pk=self.kwargs['pk'])
 
     def form_valid(self, form):
@@ -1378,11 +1331,6 @@ class SalaDetailView(LoginRequiredMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        from pacientes.models import Paciente
-        from turnos.models import Turno
-        from pacientes.models import DiagnosticoArea, SeguimientoTrimestral
-        from django.db import models
-        
         user = self.request.user
         sala = self.object
         
@@ -1531,7 +1479,6 @@ class AreaDetailView(LoginRequiredMixin, DetailView):
         area = self.object
         
         # Obtener profesionales (usuarios) asignados a esta área
-        from usuarios.models import Usuario
         profesionales = Usuario.objects.filter(
             area=area
         ).exclude(
@@ -1554,7 +1501,6 @@ class DiagnosticosListView(LoginRequiredMixin, ListView):
     login_url = 'login'
 
     def get_queryset(self):
-        from django.db.models import Q
         user = self.request.user
         
         if user.is_superuser or user.rol in ['admin', 'orientador', 'recepcionista']:
@@ -1694,7 +1640,6 @@ class SeguimientosListView(LoginRequiredMixin, ListView):
         # Aplicar filtro de búsqueda
         search = self.request.GET.get('search', '').strip()
         if search:
-            from django.db.models import Q
             qs = qs.filter(
                 Q(paciente__persona__nombre__icontains=search) |
                 Q(paciente__persona__apellido__icontains=search) |
@@ -2109,7 +2054,6 @@ class PlanesListView(LoginRequiredMixin, ListView):
     login_url = 'login'
 
     def get_queryset(self):
-        from django.db.models import Q
         user = self.request.user
         qs = PlanTratamiento.objects.filter(activo=True).select_related('paciente__persona').order_by('-fecha_inicio')
         

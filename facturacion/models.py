@@ -1,3 +1,4 @@
+from decimal import Decimal
 from django.db import models
 
 from pacientes.models import Paciente, ObraSocial
@@ -71,7 +72,6 @@ class FacturaVenta(models.Model):
 
     def calcular_total(self):
         """Calcula el total de la factura: suma de subtotales de detalles - descuento."""
-        from decimal import Decimal
         subtotal = sum(
             (detalle.subtotal for detalle in self.detalles.all()),
             Decimal('0')

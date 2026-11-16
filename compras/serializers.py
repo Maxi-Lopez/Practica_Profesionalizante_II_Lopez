@@ -1,3 +1,4 @@
+from django.utils import timezone
 from rest_framework import serializers
 from .models import Proveedor, Compra, DetalleCompra, TipoGasto, Gasto
 from inventario.serializers import ProductoListSerializer
@@ -107,8 +108,6 @@ class CompraSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'fecha', 'fecha_actualizacion', 'total', 'anulada']
 
     def validate(self, attrs):
-        from django.utils import timezone
-
         fecha = attrs.get('fecha')
         if fecha and fecha > timezone.now():
             raise serializers.ValidationError({

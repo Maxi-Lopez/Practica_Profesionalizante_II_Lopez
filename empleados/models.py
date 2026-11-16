@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import Q
 from django.core.exceptions import ValidationError
 
 from personas.models import Persona
@@ -81,7 +82,6 @@ class Empleado(models.Model):
 
         # Validar matrícula única (excluyendo la instancia actual en edición)
         if self.matricula:
-            from django.db.models import Q
             qs = Empleado.objects.filter(matricula=self.matricula)
             if self.pk:
                 qs = qs.exclude(pk=self.pk)
