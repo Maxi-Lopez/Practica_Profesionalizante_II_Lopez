@@ -1494,6 +1494,38 @@ class AreaDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
         return redirect(self.success_url)
 
 
+class AreaDetailView(LoginRequiredMixin, DetailView):
+    model = AreaInterdisciplinaria
+    template_name = 'areas/detail.html'
+    context_object_name = 'area'
+    login_url = 'login'
+    pk_url_kwarg = 'pk'
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return self.handle_no_permission()
+        user = request.user
+        if user.rol in ['psicologo', 'medico', 'trabajador_social', 'kinesiologo',
+                        'psicomotricista', 'nutricionista', 'psicopedagogo', 'pedagogo', 'enfermero']:
+            raise PermissionDenied("No tiene permiso para acceder a la gestión de áreas.")
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        area = self.object
+        
+        # Obtener profesionales (usuarios) asignados a esta área
+        from usuarios.models import Usuario
+        profesionales = Usuario.objects.filter(
+            area=area
+        ).exclude(
+            rol__in=['admin', 'orientador', 'recepcionista']
+        ).select_related('area').order_by('last_name', 'first_name')
+        
+        context['profesionales'] = profesionales
+        return context
+
+
 # ============================================================
 # DIAGNÓSTICOS POR ÁREA CRUD (HTML)
 # ============================================================

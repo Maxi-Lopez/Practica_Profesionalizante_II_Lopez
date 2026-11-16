@@ -38,6 +38,7 @@ from .views import (
     AreaCreateView,
     AreaUpdateView,
     AreaDeleteView,
+    AreaDetailView,
     DiagnosticosListView,
     DiagnosticoCreateView,
     DiagnosticoUpdateView,
@@ -130,6 +131,7 @@ urlpatterns = [
     path('areas/crear/', AreaCreateView.as_view(), name='area_create'),
     path('areas/editar/<int:pk>/', AreaUpdateView.as_view(), name='area_update'),
     path('areas/eliminar/<int:pk>/', AreaDeleteView.as_view(), name='area_delete'),
+    path('areas/<int:pk>/', AreaDetailView.as_view(), name='area_detail'),
     
     # Diagnósticos CRUD
     path('diagnosticos/', DiagnosticosListView.as_view(), name='diagnosticos_list'),
