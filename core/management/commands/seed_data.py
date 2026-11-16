@@ -159,7 +159,7 @@ class Command(BaseCommand):
     def seed_usuarios(self):
         usuarios = []
         data = [
-            ('admin', 'admin@centrodia.com', 'Admin', 'Sistema', 'admin'),
+            ('admin_seed', 'admin_seed@centrodia.com', 'Admin', 'Seed', 'admin'),
             ('psicologo1', 'psicologo1@centrodia.com', 'Ana', 'García', 'psicologo'),
             ('medico1', 'medico1@centrodia.com', 'Carlos', 'López', 'medico'),
             ('trabajador_social1', 'ts1@centrodia.com', 'María', 'Fernández', 'trabajador_social'),
