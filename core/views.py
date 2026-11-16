@@ -474,6 +474,8 @@ class PacientesListView(LoginRequiredMixin, TemplateView):
         from pacientes.models import Paciente
         from personas.models import Email
         from django.db.models import Q
+        from django.utils import timezone
+        from datetime import timedelta
         user = self.request.user
         
         base_qs = Paciente.objects.select_related('persona', 'obra_social').filter(activo=True).order_by('-fecha_ingreso')
@@ -517,18 +519,15 @@ class PacientesListView(LoginRequiredMixin, TemplateView):
         # Aplicar filtro de búsqueda
         search = self.request.GET.get('search', '').strip()
         if search:
-            from django.db.models import Q
             context['pacientes'] = context['pacientes'].filter(
                 Q(persona__nombre__icontains=search) |
                 Q(persona__apellido__icontains=search) |
                 Q(persona__dni__icontains=search)
             )
         
-        # Aplicar filtro de alerta CUD (soporta ?cud_alerta=1 y ?cud=alert)
-        cud_alerta = self.request.GET.get('cud_alerta') == '1' or self.request.GET.get('cud') == 'alert'
+        # Aplicar filtro de alerta CUD
+        cud_alerta = self.request.GET.get('cud_alerta')
         if cud_alerta:
-            from django.utils import timezone
-            from datetime import timedelta
             hoy = timezone.now().date()
             limite = hoy + timedelta(days=30)
             context['pacientes'] = context['pacientes'].filter(
@@ -537,8 +536,6 @@ class PacientesListView(LoginRequiredMixin, TemplateView):
             )
             context['cud_alerta_active'] = True
         
-        from django.utils import timezone
-        from datetime import timedelta
         context['today'] = timezone.now().date()
         context['today_plus_30'] = timezone.now().date() + timedelta(days=30)
         

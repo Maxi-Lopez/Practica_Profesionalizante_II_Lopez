@@ -37,6 +37,23 @@
         </form>
     </div>
 
+    {% if cud_alerta_active %}
+    <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div class="flex items-center gap-3">
+            <svg class="w-6 h-6 text-amber-600 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                <path fill-rule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zM12.75 9a.75.75 0 00-1.5 0v2.25H9a.75.75 0 000 1.5h2.25V15a.75.75 0 001.5 0v-2.25H15a.75.75 0 000-1.5H12.75V9z" clip-rule="evenodd" />
+            </svg>
+            <div>
+                <p class="text-sm font-semibold text-amber-900">Filtrado: CUD por vencer o vencido</p>
+                <p class="text-sm text-amber-700">Mostrando solo concurrentes con CUD vencido o que vence en los próximos 30 días.</p>
+            </div>
+        </div>
+        <a href="{% url 'pacientes_list' %}" class="flex-shrink-0 text-primary-600 hover:text-primary-800 font-medium text-sm transition-colors whitespace-nowrap">
+            Ver todos los concurrentes →
+        </a>
+    </div>
+    {% endif %}
+
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden" id="tabla-pacientes-container">
         {% if pacientes %}
             <div class="overflow-x-auto">
