@@ -42,7 +42,7 @@ DATABASES = {
     )
 }
 
-# Email en producción (SMTP - configurar según proveedor: Gmail, SendGrid, Mailgun, etc.)
+# Correo en producción (SMTP - configurar según proveedor: Gmail, SendGrid, Mailgun, etc.)
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
 EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
