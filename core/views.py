@@ -472,6 +472,8 @@ class PacientesListView(LoginRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         from pacientes.models import Paciente
+        from personas.models import Email
+        from django.db.models import Q
         user = self.request.user
         
         base_qs = Paciente.objects.select_related('persona', 'obra_social').filter(activo=True).order_by('-fecha_ingreso')
@@ -484,7 +486,6 @@ class PacientesListView(LoginRequiredMixin, TemplateView):
             profesional_qs = Paciente.objects.none()
             if user.email:
                 # Buscar empleados vinculados por email
-                from personas.models import Email
                 empleado_personas = Email.objects.filter(
                     direccion_email=user.email, activo=True
                 ).values_list('persona_id', flat=True)
@@ -497,8 +498,8 @@ class PacientesListView(LoginRequiredMixin, TemplateView):
             area_qs = Paciente.objects.none()
             if user.area:
                 area_qs = base_qs.filter(
-                    models.Q(diagnosticos_area__activo=True, diagnosticos_area__area=user.area) |
-                    models.Q(seguimientos_trimestrales__activo=True, seguimientos_trimestrales__area=user.area)
+                    Q(diagnosticos_area__activo=True, diagnosticos_area__area=user.area) |
+                    Q(seguimientos_trimestrales__activo=True, seguimientos_trimestrales__area=user.area)
                 ).distinct()
             
             # Unir ambos querysets

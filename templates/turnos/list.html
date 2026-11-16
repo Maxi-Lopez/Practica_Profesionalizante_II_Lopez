@@ -583,6 +583,93 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
+
+<script>
+// Live Search para Turnos
+(function() {
+    const searchInput = document.getElementById('search-input');
+    const tbody = document.querySelector('tbody.divide-y');
+    let debounceTimer = null;
+    const DEBOUNCE_MS = 300;
+    
+    if (!searchInput || !tbody) return;
+    
+    function debounceSearch(value) {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+            performSearch(value);
+        }, DEBOUNCE_MS);
+    }
+    
+    function performSearch(query) {
+        const url = new URL(window.location.href);
+        if (query.trim()) {
+            url.searchParams.set('search', query.trim());
+        } else {
+            url.searchParams.delete('search');
+        }
+        
+        // Mostrar estado de carga
+        const rows = tbody.querySelectorAll('tr');
+        rows.forEach(row => row.style.opacity = '0.5');
+        
+        fetch(url.toString(), {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'text/html'
+            }
+        })
+        .then(response => response.text())
+        .then(html => {
+            // Extraer el nuevo tbody del HTML de respuesta
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const newTbody = doc.querySelector('tbody.divide-y');
+            
+            if (newTbody) {
+                tbody.innerHTML = newTbody.innerHTML;
+            }
+            
+            // Actualizar URL sin recargar
+            window.history.replaceState({}, '', url.toString());
+            
+            // Restaurar opacidad
+            const newRows = tbody.querySelectorAll('tr');
+            newRows.forEach(row => row.style.opacity = '1');
+            
+            // Re-inicializar onclick para las nuevas filas
+            initRowClicks();
+        })
+        .catch(err => {
+            console.error('Error en búsqueda en vivo:', err);
+            const rows = tbody.querySelectorAll('tr');
+            rows.forEach(row => row.style.opacity = '1');
+        });
+    }
+    
+    function initRowClicks() {
+        const rows = tbody.querySelectorAll('tr[data-id]');
+        rows.forEach(tr => {
+            tr.onclick = function() { abrirModalDetalle(this); };
+        });
+    }
+    
+    searchInput.addEventListener('input', function(e) {
+        debounceSearch(this.value);
+    });
+    
+    // Limpiar búsqueda al presionar Escape
+    searchInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            this.value = '';
+            debounceSearch('');
+        }
+    });
+    
+    // Inicializar clicks al cargar
+    initRowClicks();
+})();
+</script>
 {% endblock %}
 
 {% block extra_scripts %}
