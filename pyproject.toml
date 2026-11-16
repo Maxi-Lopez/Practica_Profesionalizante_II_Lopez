@@ -1,7 +1,7 @@
 [project]
-name = "centro-salud-api"
+name = "centro-proyectar"
 version = "0.1.0"
-description = "Add your description here"
+description = "Sistema de gestión integral para el Centro de Día Proyectar (Full-Stack Django)"
 readme = "README.md"
 authors = [
     { name = "Maxi", email = "m.lopez@itecriocuarto.org.ar" }
@@ -24,7 +24,10 @@ dependencies = [
 ]
 
 [project.scripts]
-centro-salud-api = "centro_salud_api:main"
+centro-proyectar = "centro_salud_api:main"
+
+[tool.uv]
+package = false
 
 [build-system]
 requires = ["uv_build>=0.12.5,<0.13.0"]
