@@ -621,9 +621,27 @@ class TurnosListView(LoginRequiredMixin, TemplateView):
         logger = logging.getLogger(__name__)
         user = self.request.user
         
+        # Parámetro historial: si es 1, muestra historial (pasados); sino, próximos (hoy en adelante)
+        historial = self.request.GET.get('historial') == '1'
+        hoy = timezone.now().date()
+        ahora = timezone.now().time()
+        
         base_qs = Turno.objects.select_related(
             'paciente__persona', 'profesional__persona', 'servicio'
-        ).exclude(estado=EstadoTurno.CANCELADO).order_by('fecha', 'hora_inicio')
+        ).order_by('fecha', 'hora_inicio')
+        
+        if historial:
+            # Historial: turnos pasados (fecha < hoy) O turnos de hoy ya pasados O cancelados/ausentes
+            base_qs = base_qs.filter(
+                Q(fecha__lt=hoy) | 
+                Q(fecha=hoy, hora_inicio__lt=ahora) |
+                Q(estado__in=[EstadoTurno.CANCELADO, EstadoTurno.AUSENTE])
+            )
+        else:
+            # Próximos: turnos de hoy en adelante, excluyendo cancelados
+            base_qs = base_qs.exclude(estado=EstadoTurno.CANCELADO).filter(
+                Q(fecha__gt=hoy) | Q(fecha=hoy, hora_inicio__gte=ahora)
+            )
         
         if user.is_superuser or user.rol in ['admin', 'orientador', 'recepcionista']:
             context['turnos'] = base_qs
@@ -675,6 +693,7 @@ class TurnosListView(LoginRequiredMixin, TemplateView):
                 logger.warning(f"No se encontró Empleado para usuario {user.username} (email: {user.email}, rol: {user.rol})")
         
         context['hoy'] = timezone.now().date()
+        context['historial'] = historial
         
         # Generar slots de hora (00:00 a 23:30 en intervalos de 30 min)
         time_slots = []
@@ -1489,6 +1508,38 @@ class AreaDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
         self.object.save()
         messages.success(self.request, 'Área dada de baja exitosamente.')
         return redirect(self.success_url)
+
+
+class AreaDetailView(LoginRequiredMixin, DetailView):
+    model = AreaInterdisciplinaria
+    template_name = 'areas/detail.html'
+    context_object_name = 'area'
+    login_url = 'login'
+    pk_url_kwarg = 'pk'
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return self.handle_no_permission()
+        user = request.user
+        if user.rol in ['psicologo', 'medico', 'trabajador_social', 'kinesiologo',
+                        'psicomotricista', 'nutricionista', 'psicopedagogo', 'pedagogo', 'enfermero']:
+            raise PermissionDenied("No tiene permiso para acceder a la gestión de áreas.")
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        area = self.object
+        
+        # Obtener profesionales (usuarios) asignados a esta área
+        from usuarios.models import Usuario
+        profesionales = Usuario.objects.filter(
+            area=area
+        ).exclude(
+            rol__in=['admin', 'orientador', 'recepcionista']
+        ).select_related('area').order_by('last_name', 'first_name')
+        
+        context['profesionales'] = profesionales
+        return context
 
 
 # ============================================================
