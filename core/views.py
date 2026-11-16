@@ -32,7 +32,7 @@ from documentos.models import Documento
 
 
 def health_check(request):
-    """Health check endpoint para Render/Load Balancers."""
+    """Endpoint de health check para Render/Load Balancers."""
     return JsonResponse({'status': 'ok', 'service': 'centro-salud-api'})
 
 
@@ -181,7 +181,7 @@ class CustomLogoutView(LogoutView):
 
 
 # ============================================================
-# PACIENTE DETAIL & LEGAJO PRINT
+# DETALLE DE PACIENTE E IMPRESIÓN DE LEGAJO
 # ============================================================
 
 class PacienteDetailView(LoginRequiredMixin, DetailView):
@@ -978,7 +978,7 @@ class FacturacionListView(LoginRequiredMixin, TemplateView):
 
 
 # ============================================================
-# FACTURA DETAIL & PRINT
+# DETALLE DE FACTURA E IMPRESIÓN
 # ============================================================
 
 class FacturaDetailView(LoginRequiredMixin, DetailView):

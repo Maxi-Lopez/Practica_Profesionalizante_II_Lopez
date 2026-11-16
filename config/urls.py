@@ -20,10 +20,10 @@ from documentos.routers import router as documentos_router
 urlpatterns = [
     path("admin/", admin.site.urls),
 
-    # Web Interface (HTML templates)
+    # Interfaz web (plantillas HTML)
     path("", include("core.urls")),
 
-    # Password Reset (Django built-in views)
+    # Restablecimiento de contraseña (vistas integradas de Django)
     path('password-reset/', auth_views.PasswordResetView.as_view(
         template_name='registration/password_reset_form.html',
         email_template_name='registration/password_reset_email.html',
