@@ -524,6 +524,19 @@ class PacientesListView(LoginRequiredMixin, TemplateView):
                 Q(persona__dni__icontains=search)
             )
         
+        # Aplicar filtro de alerta CUD
+        cud_alerta = self.request.GET.get('cud_alerta')
+        if cud_alerta:
+            from django.utils import timezone
+            from datetime import timedelta
+            hoy = timezone.now().date()
+            limite = hoy + timedelta(days=30)
+            context['pacientes'] = context['pacientes'].filter(
+                fecha_vencimiento_cud__isnull=False,
+                fecha_vencimiento_cud__lte=limite
+            )
+            context['cud_alerta_active'] = True
+        
         from django.utils import timezone
         from datetime import timedelta
         context['today'] = timezone.now().date()
