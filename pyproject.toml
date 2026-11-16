@@ -6,7 +6,7 @@ readme = "README.md"
 authors = [
     { name = "Maxi", email = "m.lopez@itecriocuarto.org.ar" }
 ]
-requires-python = ">=3.14"
+requires-python = ">=3.12"
 dependencies = [
     "django>=6.1.1",
     "django-cors-headers>=4.9.0",
