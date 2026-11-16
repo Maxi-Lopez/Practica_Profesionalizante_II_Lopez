@@ -35,6 +35,11 @@ class Command(BaseCommand):
 
     @transaction.atomic
     def handle(self, *args, **options):
+        from pacientes.models import Paciente
+        if Paciente.objects.exists():
+            self.stdout.write(self.style.WARNING("La base de datos ya tiene datos. Saltando seed."))
+            return
+
         if options['clear']:
             self.stdout.write('Limpiando datos existentes...')
             self.clear_data()
@@ -181,23 +186,23 @@ class Command(BaseCommand):
 
     def seed_geografia(self):
         pais, _ = Pais.objects.get_or_create(nombre='Argentina', defaults={'activo': True})
-        provincias_data = ['Buenos Aires', 'Córdoba', 'Santa Fe', 'Mendoza', 'Tucumán']
-        provincias = []
-        for nombre in provincias_data:
-            prov, _ = Provincia.objects.get_or_create(nombre=nombre, pais=pais, defaults={'activo': True})
-            provincias.append(prov)
-        localidades = []
-        loc_data = [
-            ('Córdoba Capital', 5000, provincias[1]),
-            ('Villa Carlos Paz', 5152, provincias[1]),
-            ('Río Cuarto', 5800, provincias[1]),
-            ('Rosario', 2000, provincias[2]),
-            ('Santa Fe Capital', 3000, provincias[2]),
-            ('Mendoza Capital', 5500, provincias[3]),
-            ('San Miguel de Tucumán', 4000, provincias[4]),
+        provincia, _ = Provincia.objects.get_or_create(nombre='Córdoba', pais=pais, defaults={'activo': True})
+        provincias = [provincia]
+        localidades_cordoba = [
+            ('Río Cuarto', 5800),
+            ('Villa Mercedes', 5730),
+            ('Berrotarán', 5825),
+            ('Alcira Gigena', 5827),
+            ('Vicuña Mackenna', 6287),
+            ('Sampacho', 5811),
+            ('Las Higueras', 5800),
+            ('Santa Catalina', 5825),
+            ('Holmberg', 5825),
+            ('Villa Huidobro', 6287),
         ]
-        for nombre, cp, prov in loc_data:
-            loc, _ = Localidad.objects.get_or_create(nombre=nombre, provincia=prov, defaults={'codigo_postal': cp, 'activo': True})
+        localidades = []
+        for nombre, cp in localidades_cordoba:
+            loc, _ = Localidad.objects.get_or_create(nombre=nombre, provincia=provincia, defaults={'codigo_postal': cp, 'activo': True})
             localidades.append(loc)
         return pais, provincias, localidades
 

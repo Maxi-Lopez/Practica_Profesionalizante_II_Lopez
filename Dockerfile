@@ -19,4 +19,4 @@ COPY . .
 
 EXPOSE 8000
 
-CMD ["sh", "-c", "uv run python manage.py collectstatic --no-input && uv run python manage.py migrate && uv run python manage.py create_superuser && uv run gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3"]
+CMD ["sh", "-c", "uv run python manage.py collectstatic --no-input && uv run python manage.py migrate && uv run python manage.py create_superuser && uv run python manage.py seed_data && uv run gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3"]
