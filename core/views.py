@@ -524,8 +524,8 @@ class PacientesListView(LoginRequiredMixin, TemplateView):
                 Q(persona__dni__icontains=search)
             )
         
-        # Aplicar filtro de alerta CUD
-        cud_alerta = self.request.GET.get('cud_alerta')
+        # Aplicar filtro de alerta CUD (soporta ?cud_alerta=1 y ?cud=alert)
+        cud_alerta = self.request.GET.get('cud_alerta') == '1' or self.request.GET.get('cud') == 'alert'
         if cud_alerta:
             from django.utils import timezone
             from datetime import timedelta
