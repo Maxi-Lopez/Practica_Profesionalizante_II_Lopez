@@ -6,6 +6,8 @@
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Supabase-4169E1?logo=postgresql&logoColor=white)](https://supabase.com/)
 [![License](https://img.shields.io/badge/License-Academic-blue)](https://github.com/)
 
+> 🚀 **Proyecto en vivo:** [https://centro-proyectar.onrender.com](https://centro-proyectar.onrender.com)
+
 Sistema **Full-Stack (Django MVT + API REST)** para la gestión integral del Centro de Día Proyectar: pacientes, turnos, profesionales, facturación, inventario, compras y documentación clínica.
 
 ---
@@ -139,3 +141,19 @@ uv run pytest -q
 ## Licencia
 
 Proyecto académico - Prácticas Profesionalizantes II
+
+---
+
+## Capturas del Sistema
+
+### Dashboard Administrativo
+![Dashboard](docs/screenshots/dashboard.png)
+
+### Gestión de Concurrentes (con alerta CUD)
+![Pacientes](docs/screenshots/pacientes.png)
+
+### Agenda de Turnos y Modal de Agendamiento
+![Turnos](docs/screenshots/turnos.png)
+
+### Legajo Clínico Imprimible (PDF)
+![Legajo](docs/screenshots/legajo.png)
