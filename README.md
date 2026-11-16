@@ -147,7 +147,7 @@ Proyecto académico - Prácticas Profesionalizantes II
 ## Capturas del Sistema
 
 ### Dashboard Administrativo
-![Dashboard](docs/screenshots/dashboard.png)
+![Dashboard](docs/screenshots/deshaborad.png)
 
 ### Gestión de Concurrentes (con alerta CUD)
 ![Pacientes](docs/screenshots/pacientes.png)
@@ -155,5 +155,5 @@ Proyecto académico - Prácticas Profesionalizantes II
 ### Agenda de Turnos y Modal de Agendamiento
 ![Turnos](docs/screenshots/turnos.png)
 
-### Legajo Clínico Imprimible (PDF)
-![Legajo](docs/screenshots/legajo.png)
+### Facturación e Impresión de Comprobantes
+![Facturación](docs/screenshots/facturacion.png)
