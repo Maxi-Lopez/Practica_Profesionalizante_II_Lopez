@@ -10,15 +10,30 @@
             <h1 class="text-2xl font-bold text-gray-900">Turnos</h1>
             <p class="text-gray-600 mt-1">Agenda de citas y asistencias</p>
         </div>
-        <button 
-            type="button"
-            onclick="document.getElementById('modal-turno').showModal()"
-            class="bg-primary-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-700 transition-colors flex items-center justify-center">
-            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-            </svg>
-            Agendar Turno
-        </button>
+        <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+            <!-- Toggle: Próximos / Historial -->
+            <div class="flex bg-gray-100 rounded-lg p-1" role="group" aria-label="Filtrar turnos">
+                <a href="{% url 'turnos_list' %}" 
+                   class="{% if not historial %}bg-green-100 text-green-800{% else %}text-gray-600 hover:text-gray-900{% endif %} px-4 py-2 rounded-md text-sm font-medium transition-colors"
+                   aria-current="{% if not historial %}true{% else %}false{% endif %}">
+                    Turnos Próximos
+                </a>
+                <a href="{% url 'turnos_list' %}?historial=1" 
+                   class="{% if historial %}bg-green-100 text-green-800{% else %}text-gray-600 hover:text-gray-900{% endif %} px-4 py-2 rounded-md text-sm font-medium transition-colors"
+                   aria-current="{% if historial %}true{% else %}false{% endif %}">
+                    Historial
+                </a>
+            </div>
+            <button 
+                type="button"
+                onclick="document.getElementById('modal-turno').showModal()"
+                class="bg-primary-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-700 transition-colors flex items-center justify-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                </svg>
+                Agendar Turno
+            </button>
+        </div>
     </div>
 
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6">
