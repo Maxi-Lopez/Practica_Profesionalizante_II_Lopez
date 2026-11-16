@@ -15,13 +15,14 @@ from .views import (
     PacienteLegajoPrintView,
     TurnosListView,
     TurnoUpdateView,
-    TratamientosListView,
     EmpleadosListView,
     EmpleadoCreateView,
     EmpleadoUpdateView,
     EmpleadoDeleteView,
     ServiciosListView,
     FacturacionListView,
+    FacturaDetailView,
+    FacturaPrintView,
     InventarioListView,
     ComprasListView,
     DocumentosListView,
@@ -32,6 +33,7 @@ from .views import (
     SalaCreateView,
     SalaUpdateView,
     SalaDeleteView,
+    SalaDetailView,
     AreasListView,
     AreaCreateView,
     AreaUpdateView,
@@ -121,6 +123,7 @@ urlpatterns = [
     path('salas/crear/', SalaCreateView.as_view(), name='sala_create'),
     path('salas/editar/<int:pk>/', SalaUpdateView.as_view(), name='sala_update'),
     path('salas/eliminar/<int:pk>/', SalaDeleteView.as_view(), name='sala_delete'),
+    path('salas/<int:pk>/', SalaDetailView.as_view(), name='sala_detail'),
     
     # Áreas CRUD
     path('areas/', AreasListView.as_view(), name='areas_list'),
@@ -174,9 +177,10 @@ urlpatterns = [
     path('turnos/', TurnosListView.as_view(), name='turnos_list'),
     path('turnos/editar/<int:pk>/', TurnoUpdateView.as_view(), name='turno_update'),
     path('turnos/<int:pk>/estado/<str:nuevo_estado>/', cambiar_estado_turno, name='cambiar_estado_turno'),
-    path('tratamientos/', TratamientosListView.as_view(), name='tratamientos_list'),
     path('servicios/', ServiciosListView.as_view(), name='servicios_list'),
     path('facturacion/', FacturacionListView.as_view(), name='facturacion_list'),
+    path('facturacion/<int:pk>/', FacturaDetailView.as_view(), name='factura_detail'),
+    path('facturacion/<int:pk>/imprimir/', FacturaPrintView.as_view(), name='factura_print'),
     path('inventario/', InventarioListView.as_view(), name='inventario_list'),
     
     # Planes de Tratamiento CRUD

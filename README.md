@@ -1,319 +1,140 @@
-# Centro de Día Proyectar - API
+# Centro de Día Proyectar - Sistema de Gestión Integral
 
-API REST para la gestión integral del Centro de Día Proyectar.
+[![Django](https://img.shields.io/badge/Django-6.1-092E20?logo=django&logoColor=white)](https://www.djangoproject.com/)
+[![Python](https://img.shields.io/badge/Python-3.12+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Supabase-4169E1?logo=postgresql&logoColor=white)](https://supabase.com/)
+[![License](https://img.shields.io/badge/License-Academic-blue)](https://github.com/)
 
-## Tecnologías
-
-- **Backend**: Django 6.1 + Django REST Framework 3.18
-- **Base de datos**: PostgreSQL (Supabase) / SQLite (desarrollo)
-- **Autenticación**: JWT (SimpleJWT)
-- **Documentación**: drf-spectacular (OpenAPI/Swagger)
-- **Tests**: pytest + model-bakery
-- **Storage**: Supabase Storage (S3 compatible) para producción / FileSystem (local)
-- **Contenedores**: Docker + Gunicorn + WhiteNoise
-
-## Configuración de Entorno
-
-```bash
-cp .env.example .env
-# Editar .env con tus valores
-```
-
-### Variables Principales
-
-| Variable | Descripción | Default |
-|----------|-------------|---------|
-| `SECRET_KEY` | Clave secreta de Django | (requerida) |
-| `DEBUG` | Modo debug | `True` (dev) |
-| `ALLOWED_HOSTS` | Hosts permitidos | `localhost,127.0.0.1` |
-| `CSRF_TRUSTED_ORIGINS` | Orígenes CSRF confiables | `http://localhost:8000` |
-| `DATABASE_URL` | URL de PostgreSQL (vacío = SQLite) | `` |
-| `DJANGO_SETTINGS_MODULE` | Módulo de settings | `config.settings.development` |
-
-### Base de Datos (PostgreSQL)
-
-```env
-DATABASE_URL=postgresql://user:password@host:port/dbname
-```
-
-### JWT
-
-```env
-JWT_ACCESS_LIFETIME=60        # minutos
-JWT_REFRESH_LIFETIME=1440     # minutos (24hs)
-```
-
-## Storage de Media (Supabase)
-
-### Configuración
-
-El proyecto usa **Supabase Storage (S3 compatible)** solo en producción. En desarrollo local se usa el filesystem local (`MEDIA_ROOT`).
-
-```env
-# .env - Produccion
-USE_SUPABASE_STORAGE=True
-SUPABASE_S3_ACCESS_KEY=tu_access_key
-SUPABASE_S3_SECRET_KEY=tu_secret_key
-SUPABASE_S3_BUCKET=documentos
-SUPABASE_S3_ENDPOINT=https://<project-ref>.supabase.co/storage/v1/s3
-SUPABASE_S3_REGION=us-east-1
-```
-
-### Crear Bucket en Supabase
-
-1. En Supabase Dashboard → **Storage** → **Create bucket**
-2. Nombre: `documentos` (o el valor de `SUPABASE_S3_BUCKET`)
-3. **Private bucket** (no público)
-4. En **Settings** → **Storage** → **S3 Connection** → **Generate S3 Keys**
-4. Copiar **Access Key** y **Secret Key** a `.env`
-
-### Variables Requeridas
-
-| Variable | Descripción | Ejemplo |
-|----------|-------------|---------|
-| `USE_SUPABASE_STORAGE` | Habilita Supabase Storage | `True` / `False` |
-| `SUPABASE_S3_ACCESS_KEY` | Access Key de Supabase S3 | `abc123...` |
-| `SUPABASE_S3_SECRET_KEY` | Secret Key de Supabase S3 | `xyz789...` |
-| `SUPABASE_S3_BUCKET` | Nombre del bucket | `documentos` |
-| `SUPABASE_S3_ENDPOINT` | Endpoint S3 de Supabase | `https://abc123.supabase.co/storage/v1/s3` |
-| `SUPABASE_S3_REGION` | Región S3 | `us-east-1` |
-
-### Comportamiento
-
-| Entorno | `USE_SUPABASE_STORAGE` | Storage Backend |
-|---------|------------------------|-----------------|
-| Local (dev) | `False` (default) | `FileSystemStorage` (`MEDIA_ROOT`) |
-| Producción | `True` | `S3Storage` (Supabase) |
-
-**Nota**: En local (`USE_SUPABASE_STORAGE=False`), los archivos se guardan en `MEDIA_ROOT` (`./media/`). No se requieren credenciales de Supabase.
-
-## Deploy en Render + Supabase (Paso a Paso)
-
-Esta guía cubre el deploy completo usando **Render Blueprint** (`render.yaml`) y **Supabase** (PostgreSQL + Storage).
+Sistema **Full-Stack (Django MVT + API REST)** para la gestión integral del Centro de Día Proyectar: pacientes, turnos, profesionales, facturación, inventario, compras y documentación clínica.
 
 ---
 
-### 1. Preparar Supabase
+## Stack Tecnológico
 
-#### 1.1 Crear proyecto en Supabase
-1. Ir a [supabase.com](https://supabase.com) → **New Project**
-2. Organización, nombre del proyecto, contraseña de base de datos, región
-3. Esperar a que termine el aprovisionamiento (~2 min)
-
-#### 1.2 Obtener `DATABASE_URL` (Connection Pooling)
-1. En Supabase Dashboard → **Settings** → **Database** → **Connection Pooling**
-2. **Mode**: Transaction (recomendado para serverless)
-3. **Port**: 6543 (pooling) / 5432 (direct)
-4. Copiar la **Connection String** (formato URI):
-   ```
-   postgresql://postgres:<password>@<host>:6543/postgres
-   ```
-   - Reemplazar `<password>` por la contraseña que definiste al crear el proyecto
-   - El host suele ser `db.<project-ref>.supabase.co`
-
-#### 1.3 Crear Bucket en Supabase Storage
-1. **Storage** → **Create bucket**
-2. Nombre: `documentos` (debe coincidir con `SUPABASE_S3_BUCKET`)
-3. **Private bucket** (no público)
-4. En **Settings** → **Storage** → **S3 Connection** → **Generate S3 Keys**
-5. Copiar **Access Key** y **Secret Key**
+| Capa | Tecnología |
+|------|------------|
+| **Backend** | Django 6.1, Django REST Framework 3.18 |
+| **Base de datos** | PostgreSQL (Supabase) / SQLite (desarrollo) |
+| **Autenticación** | JWT (SimpleJWT) + Session Auth (MVT) |
+| **Frontend (MVT)** | Templates Django + TailwindCSS (CDN) + HTMX/Alpine.js |
+| **Documentación API** | drf-spectacular (OpenAPI/Swagger) |
+| **Static Files** | WhiteNoise |
+| **Servidor WSGI** | Gunicorn |
+| **Contenedores** | Docker + Docker Compose |
+| **Storage** | Supabase Storage (S3 compatible) / FileSystem (local) |
+| **Tests** | pytest + model-bakery |
+| **Gestor de paquetes** | uv |
 
 ---
 
-### 2. Deploy en Render (usando Blueprint `render.yaml`)
+## Características Principales
 
-#### Opción A: Blueprint (recomendado - Infrastructure as Code)
-1. En Render Dashboard → **New** → **Blueprint**
-2. Conectar repositorio de GitHub
-3. Render detectará `render.yaml` automáticamente
-4. Configurar variables de entorno **secretas** (marcadas `sync: false` en el YAML):
-   - `SECRET_KEY`: Generar con `python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"`
-   - `ALLOWED_HOSTS`: `tu-app.onrender.com` (el host que Render asigne)
-   - `CSRF_TRUSTED_ORIGINS`: `https://tu-app.onrender.com`
-   - `DATABASE_URL`: La URL de Supabase (paso 1.2)
-   - `SUPABASE_S3_ACCESS_KEY`: Del paso 1.3
-   - `SUPABASE_S3_SECRET_KEY`: Del paso 1.3
-   - `SUPABASE_S3_ENDPOINT`: `https://<project-ref>.supabase.co/storage/v1/s3`
-5. **Apply** → Render creará el servicio y hará el primer deploy
-
-#### Opción B: Web Service manual
-1. **New** → **Web Service** → Conectar repo GitHub
-2. **Runtime**: Docker
-3. **Dockerfile Path**: `./Dockerfile`
-4. **Plan**: Free (o Starter para producción real)
-5. Variables de entorno (mismas que arriba)
-6. **Create Web Service**
-
----
-
-### 3. Verificaciones Post-Deploy
-
-1. **Health Check**: `https://tu-app.onrender.com/health/` → debe responder 200 OK
-2. **Swagger UI**: `https://tu-app.onrender.com/api/schema/swagger/` → documentación API
-3. **Admin**: `https://tu-app.onrender.com/admin/` → crear superusuario si no existe:
-   ```bash
-   # En Render Shell (Console tab)
-   python manage.py createsuperuser
-   ```
-4. **Static files**: Verificar que CSS/JS cargan en `/admin/` y `/`
-5. **Media files**: Subir un documento en admin → verificar que se guarda en Supabase Storage
-
----
-
-### 4. Variables de Entorno Resumen (Render Dashboard)
-
-| Variable | Valor | Secreto (`sync: false`) |
-|----------|-------|------------------------|
-| `DJANGO_SETTINGS_MODULE` | `config.settings.production` | No |
-| `DEBUG` | `False` | No |
-| `SECRET_KEY` | `django-insecure-...` (generada) | **Sí** |
-| `ALLOWED_HOSTS` | `tu-app.onrender.com` | **Sí** |
-| `CSRF_TRUSTED_ORIGINS` | `https://tu-app.onrender.com` | **Sí** |
-| `DATABASE_URL` | `postgresql://postgres:xxx@db.xxx.supabase.co:6543/postgres` | **Sí** |
-| `USE_SUPABASE_STORAGE` | `True` | No |
-| `SUPABASE_S3_ACCESS_KEY` | `xxx` (de Supabase) | **Sí** |
-| `SUPABASE_S3_SECRET_KEY` | `xxx` (de Supabase) | **Sí** |
-| `SUPABASE_S3_BUCKET` | `documentos` | No |
-| `SUPABASE_S3_ENDPOINT` | `https://xxx.supabase.co/storage/v1/s3` | **Sí** |
-| `SUPABASE_S3_REGION` | `us-east-1` | No |
-| `EMAIL_HOST` | `smtp.gmail.com` (opcional) | No |
-| `EMAIL_PORT` | `587` (opcional) | No |
-| `EMAIL_USE_TLS` | `True` (opcional) | No |
-| `EMAIL_HOST_USER` | `tu-email@gmail.com` (opcional) | **Sí** |
-| `EMAIL_HOST_PASSWORD` | `app-password` (opcional) | **Sí** |
-
----
-
-### 5. Comandos Útiles en Render Shell
-
-```bash
-# Migraciones
-python manage.py migrate
-
-# Crear superusuario
-python manage.py createsuperuser
-
-# Collectstatic (se ejecuta solo en build, pero útil forzar)
-python manage.py collectstatic --no-input
-
-# Verificar configuración
-python manage.py check --deploy
-
-# Tests
-python manage.py test
-```
-
----
-
-### 6. Troubleshooting Común
-
-| Error | Causa | Solución |
-|-------|-------|----------|
-| `ALLOWED_HOSTS` inválido | Host no incluido | Agregar host exacto en Render Env Vars |
-| `CSRF_TRUSTED_ORIGINS` | Falta origen HTTPS | Agregar `https://tu-app.onrender.com` |
-| `DATABASE_URL` connection refused | Supabase pausado / pooling | Verificar que proyecto Supabase esté activo; usar puerto 6543 |
-| `S3Storage` credentials error | Keys incorrectas | Regenerar S3 Keys en Supabase → Storage → S3 Connection |
-| Static files 404 | WhiteNoise no sirviendo | Verificar `STATICFILES_STORAGE` y `collectstatic` ejecutado |
-| Health check fails | `/health/` no existe | Agregar vista health en `core/views.py` y URL en `config/urls.py` |
+- **Sistema cerrado**: Solo administradores crean usuarios; no hay registro público.
+- **Roles con dashboards personalizados**:
+  - **Admin**: Acceso total, gestión de usuarios/roles, configuración.
+  - **Recepcionista**: Turnos, pacientes, salas, agenda diaria, check-in.
+  - **Orientador**: Pacientes asignados, seguimientos, derivaciones, legajos.
+  - **Profesionales (Médico, Psicólogo, etc.)**: Solo sus pacientes/áreas, evolución, tratamientos, agenda propia.
+- **CRUDs HTML completos** con validaciones:
+  - Pacientes (alertas CUD: Crear/Actualizar/Eliminar con confirmaciones).
+  - Turnos (validación de solapamiento, modal de agendamiento rápido).
+  - Salas, Áreas, Diagnósticos, Seguimientos.
+- **Live Search** (búsqueda en vivo) en todos los listados.
+- **Impresión A4 optimizada** con `@media print`: Legajo del paciente y Facturas (thead/tfoot repetidos, márgenes 1.5cm).
+- **Gestión de compras, inventario y facturación** integrada (proveedores, stock, facturas, pagos, movimientos).
+- **Storage en Supabase (S3)** para documentos clínicos y adjuntos; filesystem local en desarrollo.
 
 ---
 
 ## Instalación Local
 
 ```bash
-# Clonar
-git clone <repo-url>
+# 1. Clonar y entrar
+git clone https://github.com/Maxi-Lopez/Practica_Profesionalizante_II_Lopez.git
 cd centro_salud_api
 
-# Instalar dependencias
+# 2. Instalar dependencias con uv
 uv sync
 
-# Configurar entorno
+# 3. Configurar entorno
 cp .env.example .env
-# Editar .env
+# Editar .env con tus valores (SECRET_KEY, DATABASE_URL, etc.)
 
-# Base de datos (SQLite por defecto)
+# 4. Base de datos y superusuario
 uv run python manage.py migrate
 uv run python manage.py createsuperuser
 
-# Ejecutar
+# 5. Ejecutar servidor de desarrollo
 uv run python manage.py runserver
 ```
 
-### Con Docker (desarrollo)
-
+**Con Docker (opcional):**
 ```bash
-# Construir y levantar
 docker compose up --build
-
-# El servidor estará en http://localhost:8000
+# Servidor en http://localhost:8000
 ```
 
-## Deploy en Render
+---
 
-### Variables de entorno requeridas en Render Dashboard
+## Roles y Accesos (Resumen para Docentes)
 
-```
-SECRET_KEY=<generar-con-get_random_secret_key>
-DEBUG=False
-ALLOWED_HOSTS=tu-app.onrender.com
-CSRF_TRUSTED_ORIGINS=https://tu-app.onrender.com
-DATABASE_URL=<postgresql-url-de-supabase-o-render>
-DJANGO_SETTINGS_MODULE=config.settings.production
+| Rol | Dashboard | Acceso Principal | Filtros / Restricciones |
+|-----|-----------|------------------|-------------------------|
+| **Admin** | Completo | Usuarios, Roles, Config, Todo | Sin restricciones |
+| **Recepcionista** | Agenda diaria, Turnos | Pacientes, Turnos, Salas, Check-in | Ve todos los turnos del día |
+| **Orientador** | Pacientes asignados | Seguimientos, Derivaciones, Legajos | Solo sus pacientes asignados |
+| **Profesional** | Mi agenda / Mis pacientes | Evoluciones, Tratamientos, Turnos propios | Solo su área/especialidad y pacientes vinculados |
 
-# Supabase Storage
-USE_SUPABASE_STORAGE=True
-SUPABASE_S3_ACCESS_KEY=xxx
-SUPABASE_S3_SECRET_KEY=xxx
-SUPABASE_S3_BUCKET=documentos
-SUPABASE_S3_ENDPOINT=https://xxx.supabase.co/storage/v1/s3
-SUPABASE_S3_REGION=us-east-1
-```
+> Cada rol tiene su `base.html` y `dashboard.html` con menú lateral contextual y querysets filtrados en `get_queryset()` de las CBVs.
 
-### Comportamiento del Dockerfile en Render
+---
 
-El `Dockerfile` ejecuta automáticamente al arrancar:
-1. `collectstatic --no-input` - recolecta archivos estáticos con WhiteNoise
-2. `migrate` - aplica migraciones de base de datos
-3. `gunicorn` - sirve la aplicación con 3 workers
+## Documentación API
 
-WhiteNoise sirve archivos estáticos; los media los sirve Supabase Storage.
+- **Swagger UI**: `/api/schema/swagger/`
+- **OpenAPI JSON**: `/api/schema/`
+- **Redoc**: `/api/schema/redoc/`
+
+> El foco del proyecto es **MVT (Server-Side Rendering)**; la API expone endpoints para integraciones futuras y móvil.
+
+---
+
+## Metodología (Prácticas Profesionalizantes II)
+
+- **GitFlow**: Rama `main` (producción), `develop` (integración), `feature/*`, `hotfix/*`, `release/*`.
+- **Pull Requests** obligatorios con revisión de código; no commits directos a `main`/`develop`.
+- **Commits semánticos** (Conventional Commits): `feat:`, `fix:`, `refactor:`, `docs:`, `test:`, `chore:`.
+- **Kanban** en GitHub Projects: Backlog → Ready → In Progress → Review → Done; WIP limits por columna.
+
+---
+
+## Deploy (Resumen Ejecutivo)
+
+**Plataforma**: Render (Web Service Docker) + Supabase (PostgreSQL + Storage).
+
+1. **Supabase**: Crear proyecto → obtener `DATABASE_URL` (Connection Pooling, puerto 6543) → crear bucket `documentos` (privado) → generar S3 Keys.
+2. **Render**: New → Blueprint (`render.yaml`) → conectar repo → configurar variables secretas (ver `.env.example`).
+3. **Variables clave en Render**:
+   - `DJANGO_SETTINGS_MODULE=config.settings.production`
+   - `DEBUG=False`
+   - `SECRET_KEY`, `ALLOWED_HOSTS`, `CSRF_TRUSTED_ORIGINS`
+   - `DATABASE_URL` (Supabase pooling)
+   - `USE_SUPABASE_STORAGE=True` + credenciales S3
+4. **Build automático**: `collectstatic` → `migrate` → `gunicorn` (3 workers).
+5. **Verificación**: Health check `/health/`, Swagger `/api/schema/swagger/`, Admin `/admin/`.
+
+> Detalle completo de variables en [`.env.example`](.env.example).
+
+---
 
 ## Tests
 
 ```bash
-# Todos los tests
 uv run pytest -q
-
-# Con cobertura
-uv run pytest --cov
-
-# Solo tests de storage
-uv run pytest documentos/tests/test_storage.py -v
 ```
 
-## Estructura del Proyecto
-
-```
-config/          # Settings, URLs, WSGI/ASGI
-core/            # App principal (views, forms, urls)
-usuarios/        # Auth, User model
-personas/        # Persona, Localidad, etc.
-pacientes/       # Paciente, Sala, Area, Diagnostico, Seguimiento
-empleados/       # Empleado, Rol, Horario, Asistencia
-turnos/          # Turno, Asistencia
-tratamientos/    # PlanTratamiento, Objetivo, Actividad, Evolucion
-servicios/       # Servicio, TipoServicio
-facturacion/     # Factura, Detalle, Pago
-inventario/      # Producto, Categoria, MovimientoStock
-compras/         # Proveedor, Compra, Gasto
-documentos/      # Documento (archivos)
-```
-
-## Documentación API
-
-- Swagger UI: `/api/schema/swagger/`
-- OpenAPI JSON: `/api/schema/`
+---
 
 ## Licencia
 

@@ -109,7 +109,7 @@
                             {% if user.is_superuser %}
                                 <span class="text-sm text-gray-600 hidden sm:block bg-primary-100 text-primary-800 px-2 py-1 rounded-full font-medium">Admin</span>
                             {% else %}
-                                <span class="text-sm text-gray-600 hidden sm:block">{{ user.get_full_name|default:user.username }}</span>
+                                <span class="text-sm text-gray-600 hidden sm:block bg-sky-100 text-black px-2 py-1 rounded-full font-medium">Usuario: {{ user.get_full_name|default:user.username }}</span>
                             {% endif %}
                             <form method="post" action="{% url 'logout' %}" class="inline">
                                 {% csrf_token %}
