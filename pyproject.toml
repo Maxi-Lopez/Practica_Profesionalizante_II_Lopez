@@ -1,12 +1,12 @@
 [project]
-name = "centro-salud-api"
+name = "centro-proyectar"
 version = "0.1.0"
-description = "Add your description here"
+description = "Sistema de gestión integral para el Centro de Día Proyectar (Full-Stack Django)"
 readme = "README.md"
 authors = [
     { name = "Maxi", email = "m.lopez@itecriocuarto.org.ar" }
 ]
-requires-python = ">=3.14"
+requires-python = ">=3.12"
 dependencies = [
     "django>=6.1.1",
     "django-cors-headers>=4.9.0",
@@ -21,10 +21,16 @@ dependencies = [
     "boto3>=1.43.127",
     "dj-database-url>=2.3.0",
     "whitenoise>=6.6.0",
+    "gunicorn>=22.0",
+    "faker>=40.0.0",
+    "model-bakery>=1.24.2",
 ]
 
 [project.scripts]
-centro-salud-api = "centro_salud_api:main"
+centro-proyectar = "centro_salud_api:main"
+
+[tool.uv]
+package = false
 
 [build-system]
 requires = ["uv_build>=0.12.5,<0.13.0"]
@@ -32,7 +38,6 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
-    "model-bakery>=1.24.2",
     "pytest>=9.2.0",
     "pytest-cov>=7.1.0",
     "pytest-django>=4.14.0",
