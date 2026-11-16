@@ -7,7 +7,7 @@ User = get_user_model()
 
 
 class Command(BaseCommand):
-    help = "Crear superusuario automáticamente desde variables de entorno"
+    help = "Crear o actualizar superusuario automáticamente desde variables de entorno"
 
     def handle(self, *args, **options):
         username = os.environ.get("DJANGO_SUPERUSER_USERNAME")
@@ -22,13 +22,19 @@ class Command(BaseCommand):
             )
             return
 
-        if User.objects.filter(username=username).exists():
-            self.stdout.write(
-                self.style.SUCCESS(f"Superusuario '{username}' ya existe. Saltando creación.")
-            )
-            return
+        user, created = User.objects.get_or_create(username=username, defaults={"email": email or ""})
 
-        User.objects.create_superuser(username=username, email=email or "", password=password)
-        self.stdout.write(
-            self.style.SUCCESS(f"Superusuario '{username}' creado exitosamente.")
-        )
+        user.email = email or ""
+        user.is_staff = True
+        user.is_superuser = True
+        user.set_password(password)
+        user.save()
+
+        if created:
+            self.stdout.write(
+                self.style.SUCCESS(f"Superusuario '{username}' creado exitosamente.")
+            )
+        else:
+            self.stdout.write(
+                self.style.SUCCESS(f"Superusuario '{username}' actualizado (contraseña reseteada).")
+            )
